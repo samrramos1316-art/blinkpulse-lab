@@ -40,3 +40,44 @@
 - Disclaimer: the Section 1.3 wording "has been evaluated only in small studies" was replaced by
   "has not yet been validated" until V3 is reported (approved by the author; note added to
   `PROJECT_SPEC.md` 1.3).
+
+## Phase 1: DSP core (2026-10-16)
+
+**Verified** (all in `npm run check`: 13 test files, 175 tests)
+
+- FFT vs `numpy.fft` (6 cases): worst relative error 7.2e-16 (criterion < 1e-9). Also matches a
+  naive DFT, linearity, Parseval's theorem, and the inverse round trip.
+- Butterworth SOS coefficients vs `scipy.signal.butter` (16 low/high-pass designs at orders 2 and
+  4, plus the band-pass): worst relative error 3.3e-16 (criterion < 1e-6).
+- `sosfilt`, `sosfilt_zi`, `filtfilt` vs SciPy on 3 filters and a 600-sample test signal: worst
+  relative error 2.0e-14 (criterion < 1e-6). Frequency response matches `sosfreqz`.
+- Band-pass 0.7-3.0 Hz at fs = 30 Hz: -3.01 dB at both cutoffs, -67.7 dB at 0.1 Hz, -42.7 dB at
+  8 Hz (criterion >= 40 dB). Checked from the transfer function and by filtering real sines.
+- Sine recovery, 10 s at 30 Hz: all 10 test frequencies within 0.05 Hz. A wider sweep (n = 924,
+  run once, not part of the test suite) had a worst error of 0.0007 Hz. Also within 0.05 Hz with
+  noise at 10 dB SNR plus drift.
+- `findPeaks` returns exactly SciPy's peak indices in 5 cases, including a plateau.
+- No DOM or React in `src/dsp/`: a probe using `document` still fails the typecheck after adding
+  tests there; ESLint blocks React imports.
+
+**Not verified**
+
+- Performance against the 4 ms per-frame budget: needs the live pipeline (Phase 4).
+- `tools/gen_fixtures.py` was run once, on Windows with Python 3.11.0.
+
+**Deviations and decisions**
+
+- "4th-order band-pass" is read as a 4th-order high-pass plus a 4th-order low-pass (8 poles). A
+  2nd + 2nd cascade reaches only about 21 dB at 8 Hz and would fail the 40 dB criterion. SciPy's
+  `butter(4, band)` also has 8 poles.
+- High-pass sections come before low-pass sections, to remove the large DC level of camera colour
+  traces first. The transfer function is the same either way.
+- Only even Butterworth orders are supported (the spec needs 2 and 4).
+- The bin-averaging resampler keeps each bin's mean at its samples' mean time, then interpolates.
+  The first version (mean placed at the bin centre) failed its own test with about 6% error at
+  60 fps with jitter. Details in `docs/METHODS.md`.
+- "Relative error" in the criteria is computed as max |error| / max |reference|.
+- "Robust baseline helpers" were not specified: implemented MAD and `robustBaseline` (median and
+  MAD-scaled sigma).
+- Python dependencies are in a git-ignored `.venv`, with versions pinned in
+  `tools/requirements.txt`.

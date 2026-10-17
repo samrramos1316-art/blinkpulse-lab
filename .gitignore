@@ -8,3 +8,4 @@ coverage/
 recordings/
 *.webm
 *.mp4
+.venv/

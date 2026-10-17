@@ -4,8 +4,9 @@ An experimental, fully on-device signal-processing project that estimates **blin
 **pulse rate** from webcam video, with every key algorithm (FFT, filters, resampling, peak
 detection, plots) written by hand and validated against reference data.
 
-> **Status: Phase 0 (scaffold).** The app currently shows a placeholder page. No measurement
-> features exist yet. See `PROJECT_SPEC.md` Section 2 for the phase plan.
+> **Status: Phase 1 (DSP core) complete.** The app still shows a placeholder page. The
+> hand-written signal-processing core is in `src/dsp/`, tested against SciPy/NumPy references.
+> See `PROJECT_SPEC.md` Section 2 for the phase plan.
 
 ## Disclaimer
 
@@ -29,6 +30,17 @@ npm run preview    # serve dist/ to test the production build with its CSP
 npm run check      # typecheck + lint + format check + tests
 ```
 
+## Regenerating test fixtures (optional)
+
+The SciPy/NumPy reference fixtures in `test/fixtures/` are committed. To regenerate them
+(Python 3.11+):
+
+```sh
+python -m venv .venv
+.venv/Scripts/python -m pip install -r tools/requirements.txt   # Windows (.venv/bin/python elsewhere)
+.venv/Scripts/python tools/gen_fixtures.py
+```
+
 ## Results
 
 None yet. Accuracy numbers will be reported in `docs/VALIDATION.md` with sample sizes once the
@@ -47,6 +59,7 @@ what was AI-assisted will be kept here. The author is responsible for, and must 
 explain, every algorithm.
 
 - Phase 0 (scaffold, tooling, design tokens, layout shell): AI-assisted.
+- Phase 1 (DSP core, reference fixtures, tests): AI-assisted.
 
 ## License
 
