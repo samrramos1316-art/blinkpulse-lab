@@ -28,6 +28,9 @@
   --color-quality-good: #17713a;
   --color-quality-fair: #8a5a00;
   --color-quality-poor: #b3261e;
+  /* Lines drawn over the camera image: fixed, independent of theme (video can be any colour). */
+  --color-on-video: #ffffff;
+  --color-on-video-shadow: #000000;
   --shadow-color: 220 30% 20%;
 
   /* Spacing: 4 px base */
@@ -98,6 +101,8 @@
     --color-quality-good: #6fdc94;
     --color-quality-fair: #f2c65c;
     --color-quality-poor: #ff8f86;
+    --color-on-video: #ffffff;
+    --color-on-video-shadow: #000000;
     --shadow-color: 220 40% 2%;
   }
 }
@@ -121,6 +126,8 @@
   --color-quality-good: #6fdc94;
   --color-quality-fair: #f2c65c;
   --color-quality-poor: #ff8f86;
+  --color-on-video: #ffffff;
+  --color-on-video-shadow: #000000;
   --shadow-color: 220 40% 2%;
 }
 

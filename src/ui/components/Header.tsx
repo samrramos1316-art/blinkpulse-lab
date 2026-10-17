@@ -1,8 +1,19 @@
+import type { CaptureStatus } from '../../app/captureController.ts';
 import { APP_NAME, PRIVACY_BADGE } from '../strings.ts';
-import { LockIcon, LogoMark, PlayIcon } from '../icons/Icons.tsx';
+import { HelpIcon, LockIcon, LogoMark, PlayIcon, StopIcon } from '../icons/Icons.tsx';
 import { ThemeToggle } from './ThemeToggle.tsx';
 
-export function Header() {
+interface HeaderProps {
+  status: CaptureStatus;
+  onStart: () => void;
+  onStop: () => void;
+  onOpenGuide: () => void;
+}
+
+export function Header({ status, onStart, onStop, onOpenGuide }: HeaderProps) {
+  // Stop is offered while waiting for permission too, so the request can be abandoned.
+  const active = status === 'running' || status === 'starting';
+
   return (
     <header className="app-header">
       <div className="app-header__inner">
@@ -20,14 +31,21 @@ export function Header() {
 
         <div className="app-header__actions">
           <ThemeToggle />
-          {/* Camera capture arrives in Phase 2; the button is shown so the layout is final. */}
-          <button type="button" className="btn btn-primary" disabled aria-describedby="start-note">
-            <PlayIcon size={18} />
-            <span>Start</span>
+          <button type="button" className="btn btn-ghost" onClick={onOpenGuide}>
+            <HelpIcon size={18} />
+            <span>Guide</span>
           </button>
-          <span id="start-note" className="visually-hidden">
-            Not available yet: camera capture is built in a later phase.
-          </span>
+          {active ? (
+            <button type="button" className="btn btn-primary" onClick={onStop}>
+              <StopIcon size={18} />
+              <span>Stop</span>
+            </button>
+          ) : (
+            <button type="button" className="btn btn-primary" onClick={onStart}>
+              <PlayIcon size={18} />
+              <span>Start</span>
+            </button>
+          )}
         </div>
       </div>
     </header>

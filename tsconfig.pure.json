@@ -7,5 +7,13 @@
     "lib": ["ES2023"],
     "types": []
   },
-  "include": ["src/dsp", "src/blink", "src/rppg"]
+  "include": [
+    "src/dsp",
+    "src/blink",
+    "src/rppg",
+    "src/capture/frameClock*.ts",
+    "src/capture/timestampSource*.ts",
+    "src/capture/cameraErrors*.ts",
+    "src/capture/brightness*.ts"
+  ]
 }

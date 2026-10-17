@@ -19,6 +19,25 @@ The production build injects a CSP `<meta>` tag (`csp.ts`, `vite.config.ts`). Cu
 | `base-uri`    | `'self'`       | Prevents `<base>` injection.                                                |
 | `form-action` | `'none'`       | The app submits no forms.                                                   |
 
+## Camera (Phase 2)
+
+- The camera starts only after the user presses Start or "Allow camera" in setup, after a plain
+  explanation shown before the browser prompt.
+- Frames go only to a `<video>` element; nothing is recorded, stored, or uploaded. The preview is
+  mirrored with CSS only.
+- The camera is released (all tracks stopped, `srcObject` cleared) on Stop, on `pagehide` (page
+  unload or back/forward cache), when the app unmounts, and when Stop is pressed while the
+  permission prompt is still open (the stream is stopped as soon as it arrives). Verified in
+  headless Chrome with a fake camera: track `readyState` is `ended` after Stop and after
+  `pagehide`.
+- Setup's lighting hint draws the current frame into a 32x24 canvas twice a second, computes the
+  mean brightness, and clears the canvas. No pixels are kept.
+- `localStorage` holds only the theme preference and a "setup completed" flag.
+- No network requests: a browser run of setup, Start, Stop, and restart made 0 requests to any
+  host other than the app's own origin.
+
+## CSP notes
+
 Exceptions required by MediaPipe (for example `'wasm-unsafe-eval'`) will be added in Phase 3 only
 if the official documentation and a real test show they are needed, and recorded in this table.
 

@@ -4,9 +4,10 @@ An experimental, fully on-device signal-processing project that estimates **blin
 **pulse rate** from webcam video, with every key algorithm (FFT, filters, resampling, peak
 detection, plots) written by hand and validated against reference data.
 
-> **Status: Phase 1 (DSP core) complete.** The app still shows a placeholder page. The
-> hand-written signal-processing core is in `src/dsp/`, tested against SciPy/NumPy references.
-> See `PROJECT_SPEC.md` Section 2 for the phase plan.
+> **Status: Phase 2 (capture and timing) complete.** The app opens the camera, shows a mirrored
+> preview with first-run setup, and measures frame timing (Timing details). Blink and pulse
+> measurement are not built yet. The hand-written signal-processing core is in `src/dsp/`. See
+> `PROJECT_SPEC.md` Section 2 for the phase plan.
 
 ## Disclaimer
 
@@ -20,7 +21,7 @@ detection, plots) written by hand and validated against reference data.
 
 ## Running locally
 
-Requires Node.js 22.12+ or 24+.
+Requires Node.js 22.12+ or 24+. The camera needs a secure context: `localhost` or https.
 
 ```sh
 npm install
@@ -60,6 +61,7 @@ explain, every algorithm.
 
 - Phase 0 (scaffold, tooling, design tokens, layout shell): AI-assisted.
 - Phase 1 (DSP core, reference fixtures, tests): AI-assisted.
+- Phase 2 (camera capture, frame timing, first-run setup, tests): AI-assisted.
 
 ## License
 

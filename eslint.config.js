@@ -7,7 +7,16 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 // Pure logic folders: no DOM, no React, no app/ui imports (PROJECT_SPEC Section 3).
-const PURE_DIRS = ['src/dsp/**', 'src/blink/**', 'src/rppg/**'];
+const PURE_DIRS = [
+  'src/dsp/**',
+  'src/blink/**',
+  'src/rppg/**',
+  // Pure parts of capture/ (the camera and frame loop themselves use the DOM).
+  'src/capture/frameClock*.ts',
+  'src/capture/timestampSource*.ts',
+  'src/capture/cameraErrors*.ts',
+  'src/capture/brightness*.ts',
+];
 
 export default defineConfig([
   globalIgnores(['dist', 'coverage', 'public/wasm', 'public/models']),

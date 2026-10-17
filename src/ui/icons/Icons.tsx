@@ -126,3 +126,52 @@ export function LogoMark(props: IconProps) {
     </Icon>
   );
 }
+
+export function HelpIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9.6 9.3a2.5 2.5 0 0 1 4.8 1c0 1.7-2.4 2.1-2.4 3.7" />
+      <circle cx="12" cy="17" r="1" fill="currentColor" stroke="none" />
+    </Icon>
+  );
+}
+
+export function CheckIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M8 12.3l2.7 2.7L16 9.6" />
+    </Icon>
+  );
+}
+
+export function AlertIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M10.3 4.2L2.9 17.5A2 2 0 0 0 4.6 20.5h14.8a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0z" />
+      <path d="M12 9.5v4" />
+      <circle cx="12" cy="16.8" r="1" fill="currentColor" stroke="none" />
+    </Icon>
+  );
+}
+
+export function InfoIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v5.5" />
+      <circle cx="12" cy="7.8" r="1" fill="currentColor" stroke="none" />
+    </Icon>
+  );
+}
+
+export function SunLightIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M12 3v2.5M4.6 6.1l1.8 1.8M19.4 6.1l-1.8 1.8M3 14h2.5M18.5 14H21" />
+      <path d="M7.5 18a4.5 4.5 0 0 1 9 0" />
+      <path d="M3 21h18" />
+    </Icon>
+  );
+}

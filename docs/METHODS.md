@@ -71,3 +71,85 @@ Frame timestamps are irregular. Samples are moved onto a uniform grid (30 Hz for
   1.3 Hz before this change). The averaging reduces aliasing: a 25 Hz tone sampled at 60 fps
   lost more than 6 dB at its 5 Hz alias compared with linear interpolation (test).
 - Grid points inside a source gap longer than `maxGapMs` are marked invalid (NaN), never filled.
+
+## Capture and timing (`src/capture/`, Phase 2)
+
+### Camera request
+
+`getUserMedia` is called with exactly the PROJECT_SPEC 5.1 constraints (640x480 ideal, frame rate
+ideal 60 with a minimum of 24, front camera, no audio). If no camera can meet the 24 fps minimum
+the browser rejects with `OverconstrainedError` (MDN: `min` is mandatory), and the request is
+repeated once without the minimum. The UI then says the camera runs below 24 fps. The actual
+settings come from `track.getSettings()` and are shown in Timing details.
+
+### Frame timestamps
+
+Frame callbacks come from `HTMLVideoElement.requestVideoFrameCallback` when the browser has it
+(feature-detected; callbacks are one-shot and re-registered each frame, per the WICG spec). The
+timestamp source is chosen on the first frame and kept:
+
+1. `captureTime`, if present and within 1000 ms of the callback's `now`. The spec does not state
+   its time base, so a value on another clock is rejected rather than mixed in.
+2. `presentationTime`.
+3. `mediaTime` x 1000, only if positive (it can be 0 for live streams).
+4. Without `requestVideoFrameCallback`: `requestAnimationFrame` + `performance.now()`. This fires
+   per display refresh, so frames can repeat or be skipped; it is a fallback only.
+
+If the chosen source disappears mid-session, the next best source is used and the switch is
+recorded as a gap (`sourceChange`), because the two clocks are not comparable.
+
+### FrameClock
+
+`FrameClock` (pure, unit-tested) turns raw timestamps into milliseconds since the first frame.
+Timestamps that do not increase are rejected, so `tMs` is strictly increasing. Over the last 90
+intervals it reports:
+
+- **Median interval** and **jitter** (population standard deviation of the intervals that are not
+  gaps).
+- **Measured rate** = 1000 / mean interval. The mean is used, not the median: camera intervals can
+  be skewed, and 1000 / median then overstates the delivered rate (see the measurement below).
+- **Irregular intervals**: longer than 1.5x the rolling median (the original PROJECT_SPEC 5.1 gap
+  rule). Counted and shown as a timing warning; they do not invalidate data.
+- **Gaps** (real breaks): an interval longer than 2.5x the rolling median, frames reported dropped
+  (below), a hidden tab, or a timestamp-source change. Each gap is stored as a time interval;
+  `spansGap(gaps, start, end)` lets later stages reject any blink event or pulse window that
+  overlaps one. Hidden-tab and source-change pauses are not added to the rolling statistics.
+  This split is option A, approved by the author on 2026-10-17 (note in PROJECT_SPEC 5.1),
+  because the 1.5x rule flagged 3-6% of intervals on a complete stream (table below). The 2.5x
+  factor is provisional until real webcams are measured in Phase 4.
+
+**Dropped frames** are counted from `presentedFrames` in the frame-callback metadata: a jump of
+more than 1 between callbacks means frames were shown without reaching the app, and that interval
+becomes a gap. This is only available with `requestVideoFrameCallback`. An earlier estimate from long intervals
+(`round(dt / typical dt) - 1`) was removed: on the fake camera below it reported 4 to 13 drops per
+run while `presentedFrames` showed none, because each long interval was followed by a short one
+(intervals ranged from 11 ms to 55 ms around a 33.3 ms mean).
+
+### Hidden tab
+
+On `visibilitychange` to hidden, frames are ignored (analysis paused) and the pause is recorded
+as a `hidden` gap. The status line shows "Keep this window visible (e.g. side-by-side) for
+measurements." while hidden and a "Paused while this window was hidden" note afterwards.
+
+### Browser measurement (fake camera)
+
+Headless Chrome with its built-in fake camera at 30 fps (`--use-fake-device-for-media-stream=fps=30`),
+production build, 3 runs of 10 s (about 310 frames each). An independent recorder on the same
+`<video>` element logged raw `captureTime` values next to the app:
+
+| Run | Independent: mean / median interval | Independent: intervals > 1.5x median | App: measured rate | App: new gaps | App: dropped frames |
+| --- | ----------------------------------- | ------------------------------------ | ------------------ | ------------- | ------------------- |
+| A   | 33.31 / 31.40 ms                    | 10 (all 47-50 ms)                    | (before fix) 31.9  | 11            | 0                   |
+| B   | 33.33 / 31.70 ms                    | 17 (48-55 ms)                        | 29.9 fps           | 19            | 0                   |
+| C   | 33.32 / 32.00 ms                    | 13 (48-54 ms)                        | 29.9 fps           | 12            | 0                   |
+
+The app's gap count tracks the independent count (it uses a rolling rather than a global median,
+so small differences are expected). Before the fix, run A showed 31.9 fps from 1000 / median for
+a stream delivering 30.0 fps.
+
+Runs A-C used the 1.5x rule as the gap rule ("new gaps" = intervals over 1.5x). After option A,
+one more 10 s run (independent: mean 33.29 ms, 16 intervals over 1.5x the median) showed 30.1 fps,
+14 irregular intervals, 0 gaps, and 0 dropped frames; a simulated hidden-tab pause then added
+exactly 1 gap.
+
+This is Chrome's synthetic camera, not a real webcam. Real cameras have not been measured yet.

@@ -2,11 +2,17 @@
 
 /* Header */
 .app-header {
-  position: sticky;
-  top: 0;
-  z-index: 5;
   background: var(--color-bg);
   border-bottom: 1px solid var(--color-border);
+}
+
+/* Sticky only where the header fits on one row; on phones it would cover a quarter of the screen. */
+@media (min-width: 720px) {
+  .app-header {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+  }
 }
 
 .app-header__inner {
@@ -122,10 +128,229 @@
   font-size: var(--text-sm);
 }
 
-.preview__status {
+.preview__video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Mirror the preview only (CLAUDE.md): the data itself is never flipped. */
+  transform: scaleX(-1);
+}
+
+.preview__video[hidden] {
+  display: none;
+}
+
+.preview__frame[data-live='true'] .preview__guide {
+  stroke: var(--color-on-video);
+  stroke-opacity: 0.85;
+  filter: drop-shadow(0 0 1.5px var(--color-on-video-shadow));
+}
+
+.preview__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
   padding: var(--space-3) var(--space-2) var(--space-1);
+}
+
+.preview__status {
+  display: flex;
+  flex: 1 1 16rem;
+  align-items: flex-start;
+  gap: var(--space-2);
   color: var(--color-text-muted);
   font-size: var(--text-sm);
+}
+
+.preview__status svg,
+.setup__alert svg,
+.setup__live svg,
+.setup__note svg,
+.setup__privacy svg {
+  flex: none;
+  margin-top: 1px;
+}
+
+.preview__status[data-tone='warning'],
+.preview__status[data-tone='error'] {
+  color: var(--color-text);
+}
+
+.preview__status[data-tone='warning'] svg {
+  color: var(--color-quality-fair);
+}
+
+.preview__status[data-tone='error'] svg {
+  color: var(--color-quality-poor);
+}
+
+/* Timing details (dev readout) */
+.timing {
+  margin: var(--space-2) var(--space-2) var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+  font-size: var(--text-sm);
+}
+
+.timing__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  gap: var(--space-1) var(--space-6);
+  margin: 0;
+}
+
+.timing__row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.timing__row dt {
+  color: var(--color-text-muted);
+}
+
+.timing__row dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  text-align: right;
+}
+
+.timing__note {
+  margin-top: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+/* First-run setup */
+.setup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-6);
+}
+
+.setup__top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.setup__progress {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.setup__dots {
+  display: flex;
+  gap: var(--space-1);
+  margin: 0 auto 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.setup__dots li {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--color-border);
+  transition:
+    width var(--duration-base) var(--ease-standard),
+    background-color var(--duration-base) var(--ease-standard);
+}
+
+.setup__dots li[data-state='done'] {
+  background: var(--color-accent);
+}
+
+.setup__dots li[data-state='current'] {
+  width: 20px;
+  background: var(--color-accent);
+}
+
+.setup__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.setup__title {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.01em;
+}
+
+.setup__title:focus {
+  outline: none;
+}
+
+.setup__title:focus-visible {
+  outline: 3px solid var(--color-focus);
+}
+
+.setup__privacy {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-weight: var(--weight-medium);
+}
+
+.setup__note,
+.setup__alert,
+.setup__live {
+  display: flex;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.setup__note {
+  color: var(--color-text-muted);
+}
+
+.setup__note svg {
+  color: var(--color-accent);
+}
+
+.setup__alert,
+.setup__live {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+}
+
+.setup__alert svg {
+  color: var(--color-quality-poor);
+}
+
+.setup__live svg {
+  color: var(--color-accent);
+}
+
+.setup__live[data-tone='tooDark'] svg {
+  color: var(--color-quality-fair);
+}
+
+.setup__tips {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding-left: var(--space-5);
+}
+
+.setup__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
 }
 
 /* Metric cards */

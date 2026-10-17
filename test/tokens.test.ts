@@ -53,6 +53,11 @@ const PAIRS: [string, string, number, string][] = [
   ['--color-focus', '--color-bg', AA_NON_TEXT, 'focus ring on page'],
   ['--color-focus', '--color-surface', AA_NON_TEXT, 'focus ring on cards'],
   ['--color-accent-strong', '--color-surface', AA_NON_TEXT, 'primary button boundary'],
+  ['--color-accent', '--color-surface-sunken', AA_NON_TEXT, 'setup hint icon'],
+  ['--color-quality-fair', '--color-surface', AA_NON_TEXT, 'warning icon in status line'],
+  ['--color-quality-fair', '--color-surface-sunken', AA_NON_TEXT, 'warning icon in setup hint'],
+  ['--color-quality-poor', '--color-surface', AA_NON_TEXT, 'error icon in status line'],
+  ['--color-quality-poor', '--color-surface-sunken', AA_NON_TEXT, 'error icon in setup alert'],
 ];
 
 describe('design tokens', () => {

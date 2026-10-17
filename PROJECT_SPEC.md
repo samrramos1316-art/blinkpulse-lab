@@ -179,6 +179,8 @@ It also includes a **Signal Lab view** that shows each intermediate signal (EAR 
 
 **`FrameClock` (pure, unit-tested):** input raw timestamps, output `{tMs, dtMs}`, rolling median dt, jitter, and gap flags (dt > 1.5x median dt). Gaps invalidate any blink event or pulse window that spans them.
 
+> **Gap rule changed (option A, approved by the author, 2026-10-17):** dt > 1.5x median dt is an *irregular interval*: counted and shown as a timing warning, but it does not invalidate data. Only real breaks are gaps that invalidate spanning blink events and pulse windows: dt > 2.5x median dt, frames reported dropped by `requestVideoFrameCallback` (`presentedFrames`), a hidden tab, or a timestamp-source change. Reason: on Chrome's fake camera the 1.5x rule flagged 3-6% of intervals with no frames lost (`docs/METHODS.md`), which would reject nearly every 10 s pulse window. The 2.5x factor is provisional and is to be checked on real webcams in Phase 4.
+
 ### 5.2 Landmarks (`vision/`)
 
 - Use `FaceLandmarker` with `runningMode: 'VIDEO'`, `numFaces: 1`, `outputFacialTransformationMatrixes: true`. Call `detectForVideo(video, timestampMs)`; timestamps must be strictly increasing.

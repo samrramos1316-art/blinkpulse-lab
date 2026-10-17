@@ -81,3 +81,69 @@
   MAD-scaled sigma).
 - Python dependencies are in a git-ignored `.venv`, with versions pinned in
   `tools/requirements.txt`.
+
+## Phase 2: Capture and timing (2026-10-17)
+
+**Verified**
+
+- `npm run check` passes: 18 test files, 247 tests.
+- `FrameClock` unit tests: monotonic ms, rejection of repeated/decreasing/non-finite timestamps,
+  rolling median, jitter (checked against an exact std), rate from mean interval, irregular at
+  1.49x vs 1.51x median, gap at 2.49x vs 2.51x, dropped / hidden / source-change gaps, `spansGap`
+  overlap rules.
+- Timestamp source choice (captureTime, presentationTime, mediaTime, performance.now) unit-tested,
+  including rejecting a `captureTime` on a different clock.
+- Failure handling unit-tested with fake browser APIs (`captureController.test.ts`): permission
+  denied, no camera, camera in use, insecure context, no getUserMedia, track ended, tab hidden,
+  Stop during the permission prompt, retry after an error, restart after Stop.
+- In headless Chrome with a fake camera (production build, scripts kept outside the repo):
+  - Setup flow, Start, Stop, restart, all keyboard-only.
+  - Permission denied (no auto-grant) shows the plain-language message.
+  - Simulated track end (`ended` event) shows "The camera stopped..." and stops the track.
+  - Stop and `pagehide` both leave every track `ended`; Stop clears `srcObject`.
+  - Hidden tab (via an overridden `visibilityState` + `visibilitychange`): analysis pauses, the
+    spec message shows, the pause is recorded as one gap.
+  - The 24 fps minimum is rejected by the 20 fps default fake camera and the relaxed retry works;
+    at 30 fps the full constraint set is accepted.
+  - Timing cross-checked against an independent recorder (table in `docs/METHODS.md`).
+  - 0 requests to other hosts; no console errors or warnings.
+  - Screenshots reviewed: light and dark at 1280 px, light at 360 px (no horizontal scroll).
+
+**Not verified**
+
+- Any real webcam. Everything above used Chrome's synthetic camera. In particular, real "camera
+  in use" (`NotReadableError`) and a real unplug were not produced; they are covered by unit tests
+  and a dispatched `ended` event only.
+- A real hidden/minimised window: headless Chrome keeps background tabs `visible`, so the event
+  was simulated.
+- The `requestAnimationFrame` fallback in a browser without `requestVideoFrameCallback` (only
+  unit-tested via the controller).
+- Firefox and Safari. 768 px width. Reduced-motion behaviour.
+- The performance budget (still Phase 4).
+
+**Deviations and decisions**
+
+- **Gap rule changed (option A, approved by the author 2026-10-17):** the spec's "dt > 1.5x median"
+  flagged 3-6% of intervals on the fake camera with no frames lost, which would reject nearly every
+  10 s pulse window. Now 1.5x marks an _irregular interval_ (warning only); gaps that invalidate
+  data are dt > 2.5x median, `presentedFrames` drops, hidden tab, and source change. Note added to
+  PROJECT_SPEC 5.1. The 2.5x factor is provisional: re-check with real webcams in Phase 4.
+- Measured rate is 1000 / mean interval, not 1000 / median: the median overstated the fake
+  camera's 30.0 fps as 31.9 fps.
+- "Dropped-frame count" comes from `presentedFrames` jumps (requestVideoFrameCallback only); the
+  rAF fallback shows "not measurable". An interval-based estimate was tried and removed (see
+  `docs/METHODS.md`).
+- If the 24 fps minimum cannot be met, the camera is opened again without it, rather than failing.
+  The UI says so.
+- `captureTime` is used only within 1000 ms of the callback time, because its time base is not
+  stated in the spec. `mediaTime` is used only when positive.
+- Exposure / white-balance locking (5.1) is deferred to Phase 4, where it matters for pulse; locking
+  before auto-exposure settles could leave a bad exposure.
+- First-run setup has 4 steps now (welcome, camera, position, done); calibration joins in Phase 3.
+  The positioning step's live hint covers lighting only (an untuned brightness threshold); distance
+  and stillness hints need face landmarks (Phase 3).
+- Pure parts of `src/capture/` (`frameClock`, `timestampSource`, `cameraErrors`, `brightness`) are
+  added to the no-DOM typecheck and ESLint rules.
+- Header is sticky only at >= 720 px; on phones it took a quarter of the screen.
+- Metric cards are one column at 360 px; Amendment 02 asks for two. Left for the Phase 5 polish pass.
+- Timing details are shown by default in development builds and hidden by default in production.
