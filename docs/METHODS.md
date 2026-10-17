@@ -262,3 +262,31 @@ scoring. Frames skipped by the player (`presentedFrames` jumps) are counted and 
 any occur, analyse again at a lower speed. Labelling is frame by frame with the detections hidden.
 Exports (numbers only): detections, labels, and per-frame EAR CSV. Scoring (`src/blink/v1.ts`) is
 shared by the page and `npm run score:v1`.
+
+## Session timeline (`src/blink/sessionSummary.ts`, Phase 3b)
+
+Per SPEC_AMENDMENT_01 Patch B. The session starts with the first frame after the first
+calibration and is cut into one-minute bins.
+
+- **Valid time** uses the same rule as the 60 s metrics: intervals between consecutive valid samples
+  without a gap (<= 100 ms, no FrameClock gap flag), split exactly at minute boundaries.
+- **Lost time** is attributed per interval: a gap (> 100 ms or flagged: hidden tab, dropped frames)
+  counts as "gap"; otherwise the reason of the invalid sample (face not found, head turned,
+  calibrating during a recalibration).
+- **Events** belong to the minute in which they start; closed time is split across minutes.
+- **Usable** when valid time is at least 70% of the full minute (Patch B). The current minute is
+  therefore unusable until 42 s of it are valid. Unusable minutes report no values (gaps in plots,
+  "-" in the table, empty cells in the CSV), never zeros. A usable minute without blinks reports a
+  count of 0 and no duration.
+- Per usable minute: blink count (blinks + long closures), rate per valid minute, median and mean
+  duration, long and extended closures, eye-closed fraction (all kinds / valid time). Each minute
+  also records its median frame interval; below 24 fps (the camera minimum in PROJECT_SPEC 5.1)
+  it is marked low frame rate.
+- Synthetic test (5 minutes at 30 fps, noise sd 0.005, 2 ms jitter, one run): a 30 s face dropout,
+  a 25 s head turn, and a 20 s frame gap each made their minute unusable with the right reason, and
+  lost time matched the injected durations to within 0.5 s. In the two usable minutes (n = 12 and
+  n = 8 events), counts and long-closure counts matched the truth exactly, median duration was
+  within 34 ms, and eye-closed fraction within n x 34 ms / 60 s of the truth.
+- The view shows four per-minute plots (rate, median duration, eye-closed fraction, long
+  closures), a coverage bar (solid vs hatched), a per-minute table, and text descriptions of each
+  plot. Export asks for confirmation and states what the file contains.

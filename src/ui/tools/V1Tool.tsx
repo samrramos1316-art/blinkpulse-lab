@@ -20,6 +20,7 @@ import { createLandmarker, type Landmarker } from '../../vision/faceLandmarker.t
 import { headPoseFromMatrix } from '../../vision/headPose.ts';
 import { EYE_A, EYE_B, toPixels } from '../../vision/landmarks.ts';
 import { Footer } from '../components/Footer.tsx';
+import { downloadText as download } from '../download.ts';
 
 const CONDITIONS = ['baseline', 'glasses', 'lower-light', 'head-turned'] as const;
 type Condition = (typeof CONDITIONS)[number];
@@ -179,15 +180,6 @@ class V1Runtime {
     this.landmarker?.close();
     this.landmarker = null;
   }
-}
-
-function download(name: string, text: string): void {
-  const url = URL.createObjectURL(new Blob([text], { type: 'text/csv' }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  a.click();
-  URL.revokeObjectURL(url);
 }
 
 const secs = (ms: number) => (ms / 1000).toFixed(3);

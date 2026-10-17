@@ -159,4 +159,20 @@ describe('BlinkPipeline', () => {
     expect(p.history().t.length).toBe(0);
     expect(p.snapshot().metrics.blinkCount).toBe(0);
   });
+
+  it('session timeline starts after the first calibration; recalibration is lost time', () => {
+    const p = new BlinkPipeline(EYE_A, EYE_B);
+    expect(p.snapshot().session).toEqual([]);
+    const { p: q, next } = calibrated();
+    let i = next;
+    for (; i < next + 30 * 65; i++) q.process(tick(i), face(earAt(i)));
+    q.startCalibration();
+    for (const end = i + 30 * 12; i < end; i++) q.process(tick(i), face(earAt(i)));
+    const [m1, m2] = q.snapshot().session;
+    expect(m1?.usable).toBe(true);
+    expect(m1?.blinkCount).toBeGreaterThan(0);
+    expect((m2?.lostMs.calibrating ?? 0) / 1000).toBeCloseTo(10, 0);
+    q.resetSession();
+    expect(q.snapshot().session).toEqual([]);
+  });
 });

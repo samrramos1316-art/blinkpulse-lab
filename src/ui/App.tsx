@@ -9,7 +9,9 @@ import { Footer } from './components/Footer.tsx';
 import { Header } from './components/Header.tsx';
 import { MetricCard } from './components/MetricCard.tsx';
 import { PreviewPanel } from './components/PreviewPanel.tsx';
+import { SessionTimeline } from './components/SessionTimeline.tsx';
 import { SetupGuide } from './components/SetupGuide.tsx';
+import { Tabs } from './components/Tabs.tsx';
 import { readSetupDone, writeSetupDone } from './setup.ts';
 import { INDICATOR, METRIC } from './strings.ts';
 
@@ -118,8 +120,28 @@ export function App({ initialSetupOpen }: AppProps) {
           <h2 id="plots-title" className="section-title">
             Signals
           </h2>
-          <EarPlot pipeline={blink.pipeline} active={live} />
-          <p className="plots__empty">Pulse plots arrive in a later version.</p>
+          <Tabs
+            label="Signal views"
+            tabs={[
+              {
+                id: 'blinks',
+                label: 'Blinks',
+                render: () => <EarPlot pipeline={blink.pipeline} active={live} />,
+              },
+              {
+                id: 'pulse',
+                label: 'Pulse',
+                render: () => (
+                  <p className="plots__empty">Pulse plots arrive in a later version.</p>
+                ),
+              },
+              {
+                id: 'session',
+                label: 'Session timeline',
+                render: () => <SessionTimeline bins={blink.snapshot.session} />,
+              },
+            ]}
+          />
         </section>
       </main>
       <Footer />

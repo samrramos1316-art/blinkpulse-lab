@@ -40,6 +40,8 @@ The production build injects a CSP `<meta>` tag (`csp.ts`, `vite.config.ts`). Cu
   "Freeze frame" keeps one frame in memory only while frozen.
 - The V1 tool reads a video file the user picks, from a local object URL; nothing is uploaded.
   Its exports (after a button press) hold numbers only: event times, EAR values, flags.
+- The session timeline is kept in memory only and cleared on the next Start. Its CSV export
+  needs two clicks; the confirmation lists what the file contains (per-minute numbers only).
 
 ## MediaPipe usage logger (found 2026-10-17)
 

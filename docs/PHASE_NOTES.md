@@ -203,3 +203,44 @@ in the Explorer.
 - The Explorer and V1 tool are hash routes (`#explorer`, `#v1`) in the same build, not separate
   pages.
 - "Calibrate" sits in the header while the camera runs; at narrow widths the header buttons wrap.
+
+## Phase 3b: Blink timeline (2026-10-17)
+
+Started at the author's request ("commit and move on") with Phase 3's V1 still open.
+
+**Verified**
+
+- `npm run check` passes: 33 test files, 366 tests.
+- `sessionSummary.ts` unit tests: exact minute splitting, usable/unusable rules, nulls (never
+  zeros) for unusable minutes, lost-time attribution per reason, events assigned by start with
+  closed time split across minutes, low frame rate flag, CSV export.
+- Patch B synthetic test: 5-minute session with a dropout minute, a head-turn minute, and a
+  frame-gap minute (results in `docs/METHODS.md`).
+- Pipeline: the timeline starts after the first calibration, a recalibration counts as lost
+  "calibrating" time, and a new camera session clears it.
+- Plot geometry and text alternatives unit-tested; a usable minute without blinks is no longer
+  described or drawn as "unusable" (bug found while testing).
+- Server-rendered view test: unusable minute shows "-" and its reason, every coverage cell has a
+  text label, export needs a second click.
+- Browser (dev server, synthetic bins rendered through a temporary module, since removed): light
+  and dark at 1280 px, 360 px without horizontal scroll, focus moves to the export confirmation,
+  tabs work with arrow keys and Home/End.
+
+**Not verified**
+
+- Live use: the author tried the timeline with a real camera (2026-10-17) and reported it working;
+  no numbers from that session were recorded.
+- Saving the CSV in a real browser (download not exercised headlessly).
+- Screen-reader output of the tabs, plots, and coverage bar.
+
+**Deviations and decisions**
+
+- "Same consent flow as Record trace": Record trace does not exist yet (Phase 5 settings). The
+  export uses an inline confirmation that says what the file contains; Record trace should reuse it.
+- Events are assigned to the minute where they start (Patch B does not say).
+- Lost time adds a "calibrating" reason, and minutes below 24 fps are marked (Patch B lists low
+  FPS as a reason, without a threshold; 24 fps is the camera minimum from PROJECT_SPEC 5.1). Low
+  frame rate does not by itself make a minute unusable.
+- The in-progress minute is shown as not yet usable (hatched) with "so far (in progress)" in the
+  table.
+- The signals area now has tabs (Blinks / Pulse / Session timeline) per SPEC_AMENDMENT_02.

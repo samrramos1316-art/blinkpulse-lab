@@ -11,6 +11,7 @@ import { BlinkDetector, type BlinkEvent, type EarSample } from '../blink/blinkDe
 import { calibrate, type BlinkThresholds, type CalibrationResult } from '../blink/calibration.ts';
 import { earBothEyes, type EyeIndices, type Point } from '../blink/ear.ts';
 import { BlinkMetrics, type BlinkMetricsSnapshot } from '../blink/metrics.ts';
+import { SessionSummary, type MinuteBin } from '../blink/sessionSummary.ts';
 import type { FrameTick } from '../capture/frameClock.ts';
 import { median } from '../dsp/stats.ts';
 import { poseWithinLimits, relativePose, type HeadPose } from '../vision/headPose.ts';
@@ -55,6 +56,8 @@ export interface BlinkSnapshot {
   eyeSpanFraction: number | null;
   /** Head pose during calibration (gating reference), or null. */
   referencePose: HeadPose | null;
+  /** Per-minute session bins (SPEC_AMENDMENT_01 Patch B); empty before the first calibration. */
+  session: MinuteBin[];
 }
 
 export interface EarHistory {
@@ -89,6 +92,8 @@ export class BlinkPipeline {
 
   private detector: BlinkDetector | null = null;
   private readonly metrics = new BlinkMetrics();
+  /** Session timeline: starts with the first sample after the first calibration. */
+  private readonly session = new SessionSummary();
   private thresholds: BlinkThresholds | null = null;
   private calibration: CalibrationState = { phase: 'none' };
   private calibrationSamples: number[] = [];
@@ -143,7 +148,25 @@ export class BlinkPipeline {
     const sample: EarSample = { tMs: tick.tMs, ear, valid, gapBefore: tick.gap };
     this.record(tick.tMs, valid ? ear : NaN, face !== null);
 
-    if (this.calibration.phase === 'running') {
+    const calibrating = this.calibration.phase === 'running';
+    if (this.thresholds !== null) {
+      this.session.addSample(
+        valid && !calibrating
+          ? { tMs: tick.tMs, valid: true, gapBefore: tick.gap }
+          : {
+              tMs: tick.tMs,
+              valid: false,
+              reason: calibrating
+                ? 'calibrating'
+                : status === 'headTurned'
+                  ? 'headTurned'
+                  : 'noFace',
+              gapBefore: tick.gap,
+            },
+      );
+    }
+
+    if (calibrating) {
       this.stepCalibration(sample);
       return null;
     }
@@ -152,6 +175,7 @@ export class BlinkPipeline {
     const event = this.detector?.push(sample) ?? null;
     if (event) {
       this.metrics.addEvent(event);
+      this.session.addEvent(event);
       this.events.push(event);
       const lo = tick.tMs - HISTORY_MS;
       if ((this.events[0]?.endMs ?? Infinity) < lo)
@@ -178,6 +202,7 @@ export class BlinkPipeline {
   resetSession(): void {
     this.cancelCalibration();
     this.metrics.reset();
+    this.session.reset();
     this.detector?.reset();
     this.events = [];
     this.histCount = 0;
@@ -233,6 +258,7 @@ export class BlinkPipeline {
       faceFoundFraction,
       eyeSpanFraction: finite(this.last.eyeSpan),
       referencePose: this.referencePose,
+      session: this.session.bins(),
     };
   }
 

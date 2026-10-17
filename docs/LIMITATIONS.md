@@ -28,3 +28,12 @@ _Skeleton created in Phase 0. This file is filled in as the relevant phases and 
 - Glasses, glare, heavy makeup, and partial occlusion can disturb the eyelid landmarks (to be
   measured in V1 "with glasses").
 - The distance hint uses untested limits on face size in the frame.
+
+## Session timeline (Phase 3b)
+
+- Per-minute values inherit every limitation of the blink detector above; they have not been
+  validated on real recordings.
+- The 70% usable-time rule comes from the amendment and is not tuned. A minute just above it
+  rests on about 42 s of data.
+- The timeline lives only in memory: it is cleared when the camera is started again and lost when
+  the page closes, unless exported.

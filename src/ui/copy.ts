@@ -72,3 +72,21 @@ export const CALIBRATION_COPY = {
     'Calibration needs your face in view for most of the 10 seconds. Centre your face, then try again.',
   done: 'Calibration done. You can recalibrate at any time with the Calibrate button.',
 } as const;
+
+export const SESSION_COPY = {
+  empty:
+    'The session timeline starts after calibration. Each minute appears here as it is measured.',
+  intro:
+    'One point per minute since measuring started. Minutes with less than 70% usable time are shown as gaps, not zeros. Descriptive only: these numbers describe this session and are not compared with any norm.',
+  exportInfo:
+    'This saves a CSV file with one row per minute: time, usable-time coverage, blink count and rate, blink durations, long closures, eye-closed fraction, and lost time by reason. It contains no video, images, or face landmarks. Your browser saves the file; the app keeps no copy.',
+} as const;
+
+/** Why a minute was not usable (coverage bar and table). */
+export const LOST_REASON_TEXT = {
+  noFace: 'face not found',
+  headTurned: 'head turned away',
+  gap: 'video paused or frames missing',
+  calibrating: 'calibrating',
+  lowFps: 'low frame rate',
+} as const;

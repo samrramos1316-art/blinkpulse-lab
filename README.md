@@ -4,10 +4,10 @@ An experimental, fully on-device signal-processing project that estimates **blin
 **pulse rate** from webcam video, with every key algorithm (FFT, filters, resampling, peak
 detection, plots) written by hand and validated against reference data.
 
-> **Status: Phase 3 (blink detection) built, validation pending.** The app tracks face landmarks
+> **Status: Phase 3b (blink timeline) built; Phase 3 validation V1 pending.** The app tracks face landmarks
 > on the device, calibrates to your open-eye level, and shows blink rate, eye-closed fraction, and
-> a live EAR plot. Its accuracy on real video has not been measured yet (validation V1). Pulse
-> measurement is not built yet. See `PROJECT_SPEC.md` Section 2 for the phase plan.
+> a live EAR plot, plus a per-minute session timeline with numeric export. Its accuracy on real
+> video has not been measured yet (validation V1). Pulse measurement is not built yet. See `PROJECT_SPEC.md` Section 2 for the phase plan.
 
 ## Disclaimer
 
@@ -71,6 +71,7 @@ explain, every algorithm.
 - Phase 2 (camera capture, frame timing, first-run setup, tests): AI-assisted.
 - Phase 3 (landmarks, EAR, calibration, blink detector, plot, Explorer, V1 tool, tests):
   AI-assisted.
+- Phase 3b (per-minute session timeline, plots, export, tests): AI-assisted.
 
 ## License
 
