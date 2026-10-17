@@ -21,7 +21,12 @@ export function writeSetupDone(): void {
   }
 }
 
-export type SetupStep = 'welcome' | 'camera' | 'position' | 'done';
+export type SetupStep = 'welcome' | 'camera' | 'position' | 'calibrate' | 'done';
 
-/** Calibration joins between 'position' and 'done' in Phase 3. */
-export const SETUP_STEPS: readonly SetupStep[] = ['welcome', 'camera', 'position', 'done'];
+export const SETUP_STEPS: readonly SetupStep[] = [
+  'welcome',
+  'camera',
+  'position',
+  'calibrate',
+  'done',
+];

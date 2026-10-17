@@ -1,13 +1,16 @@
 import type { CaptureSnapshot } from '../../app/captureController.ts';
-import { captureStatusText } from '../captureStatus.ts';
+import { captureStatusText, type StatusText } from '../captureStatus.ts';
 import { AlertIcon, InfoIcon } from '../icons/Icons.tsx';
-import { TimingPanel } from './TimingPanel.tsx';
+import { TimingPanel, type TrackingInfo } from './TimingPanel.tsx';
 
 interface PreviewPanelProps {
   videoRef: (el: HTMLVideoElement | null) => void;
   snapshot: CaptureSnapshot;
   showTiming: boolean;
   onToggleTiming: () => void;
+  /** Status line override (face tracking, calibration); defaults to the camera status. */
+  status?: StatusText;
+  tracking?: TrackingInfo;
 }
 
 export function PreviewPanel({
@@ -15,10 +18,12 @@ export function PreviewPanel({
   snapshot,
   showTiming,
   onToggleTiming,
+  status: statusOverride,
+  tracking,
 }: PreviewPanelProps) {
   const live = snapshot.status === 'running';
   const hasTiming = snapshot.timing !== null || live;
-  const status = captureStatusText(snapshot);
+  const status = statusOverride ?? captureStatusText(snapshot);
   const StatusIcon = status.tone === 'neutral' ? InfoIcon : AlertIcon;
 
   return (
@@ -62,7 +67,9 @@ export function PreviewPanel({
 
       {hasTiming ? (
         <div id="timing-panel" hidden={!showTiming}>
-          {showTiming ? <TimingPanel snapshot={snapshot} /> : null}
+          {showTiming ? (
+            <TimingPanel snapshot={snapshot} {...(tracking ? { tracking } : {})} />
+          ) : null}
         </div>
       ) : null}
     </section>

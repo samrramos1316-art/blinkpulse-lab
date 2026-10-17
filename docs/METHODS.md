@@ -153,3 +153,112 @@ one more 10 s run (independent: mean 33.29 ms, 16 intervals over 1.5x the median
 exactly 1 gap.
 
 This is Chrome's synthetic camera, not a real webcam. Real cameras have not been measured yet.
+
+## Face landmarks and blinks (`src/vision/`, `src/blink/`, Phase 3)
+
+### Model and runtime
+
+- `@mediapipe/tasks-vision` 1.1.1 (pinned), FaceLandmarker in `VIDEO` mode, 1 face,
+  facial transformation matrix on, blendshapes off. GPU delegate first, CPU as fallback.
+- Model `public/models/face_landmarker.task` (float16), 3,758,596 bytes, SHA-256
+  `64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff`, downloaded 2026-10-17 from
+  MediaPipe's model storage (`face_landmarker/float16/latest`, Last-Modified 2023-05-03). The wasm
+  files are copied from the npm package into `public/wasm/` by `tools/copy-mediapipe-assets.mjs`
+  on `npm run dev` / `npm run build`. Both are served from the app's own origin.
+- `detectForVideo` needs strictly increasing timestamps; the wrapper adds an offset so this holds
+  across camera restarts.
+- The library contains a usage logger that POSTs to a Google endpoint (see
+  `docs/ETHICS_AND_PRIVACY.md`). The CSP blocks it in development and production.
+
+### Landmark verification
+
+| Index list                             | Topology (package constants) | Canonical face geometry | Live, Landmark Explorer      |
+| -------------------------------------- | ---------------------------- | ----------------------- | ---------------------------- |
+| Eye A `[33, 160, 158, 133, 153, 144]`  | done                         | done                    | checked by the author        |
+| Eye B `[362, 385, 387, 263, 373, 380]` | done                         | done                    | checked by the author        |
+| Head-pose signs (yaw / pitch / roll)   | n/a                          | n/a                     | sign directions not recorded |
+
+- Topology: in `FACE_LANDMARKS_RIGHT_EYE` / `_LEFT_EYE` of tasks-vision 1.1.1, the corners are the
+  points shared by the upper and lower lid paths, and P2/P6 and P3/P5 sit the same number of steps
+  from P1 on the upper and lower paths. Eye A (33, 133) is MediaPipe's "right eye", the subject's
+  right eye.
+- Geometry: on MediaPipe's `canonical_face_model.obj`, P1 is lateral of P4 for eye A, P2/P3 lie
+  directly above P6/P5, and eye B is the exact mirror of eye A. EAR of the canonical (open) eye:
+  0.231.
+- Live check (2026-10-17, one person, one laptop webcam): the author went through the Explorer
+  checklist and reported "checked". The detailed observations, including which way yaw, pitch,
+  and roll move, were not written down. Gating uses only the size of the change from the
+  calibration pose, so the sign convention does not affect it; record it before any feature
+  depends on the sign.
+
+### Eye aspect ratio
+
+EAR = (|P2 - P6| + |P3 - P5|) / (2 |P1 - P4|), on **pixel** coordinates (normalised x and y have
+different scales; a unit test shows normalised space distorts EAR on a 4:3 frame). The per-frame
+value is the mean of both eyes; each eye is kept for the Timing details and the V1 export.
+
+### Calibration
+
+10 s of valid samples: `b0 = median`, `b = median(samples >= 0.85 b0)`, close threshold `0.70 b`,
+reopen threshold `0.80 b` (PROJECT_SPEC 5.3). Fewer than 100 valid samples asks for a retry. The
+median head pose during calibration becomes the reference for head-pose gating.
+
+### Blink detector
+
+Hysteresis state machine (open, closed, reopening). Start and end times are linear interpolations
+of the close- and reopen-threshold crossings between frame timestamps. Events are classified by
+duration: blink (< 500 ms), long closure (500-2000 ms), extended closure (> 2000 ms). An event with
+only one sample below the close threshold is marked low confidence. An invalid sample (no face,
+head turned) or a frame gap over 100 ms aborts the event in progress.
+
+### Head-pose gating (deviation from PROJECT_SPEC 5.3)
+
+Yaw, pitch, and roll come from the facial transformation matrix (R = Ry Rx Rz). Samples are
+rejected when the pose differs from the **calibration reference pose** by more than 25 deg yaw or
+20 deg pitch. The spec's limits are absolute, but in the first live test (one person, one laptop
+webcam) normal viewing read about 19 deg pitch because the camera sits below eye level, so most
+frames were rejected and calibration never finished. There is no pose gating before or during
+calibration.
+
+### Metrics
+
+Over the last 60 s: blink rate = (blinks + long closures) per minute of **valid** time; eye-closed
+fraction = closed time of all events / valid time; last and median blink duration. Nothing is shown
+before 20 s of valid time. Durations are accurate to about +-1 frame interval.
+
+### Synthetic tests (PROJECT_SPEC 6.3)
+
+Generated EAR sequences with known event times (`tools/synth.ts`: seeded noise, truth by bisection
+on the noise-free signal), scored with `matchEvents` (+-100 ms on start time):
+
+- Clean blinks at 24, 30, and 60 fps, 15 blinks each (n = 45): precision 1, recall 1, every
+  duration error below one frame interval.
+- Noisy baseline (sd 0.01) with 3 ms timestamp jitter, 24/30/60 fps, 15 blinks each (n = 45):
+  precision 1, recall 1, every duration error below one frame interval.
+- Single cases: fast blink of about 116 ms at 24 fps is found; slow 400 ms blink is one event;
+  1 s and 3 s closures are classified; a single-frame dip is reported with low confidence; a squint
+  above the close threshold is not an event; hysteresis keeps a wobbling closure as one event;
+  baseline drift of -0.03 per minute keeps precision and recall at 1; gaps over 100 ms and invalid
+  samples abort events, a single dropped frame does not.
+
+These are tests of the detector logic on idealised signals, not of accuracy on real video
+(validation V1).
+
+### Setup hints and EAR plot
+
+- Positioning hint (one at a time): face not found, "Move a little closer" when the outer-eye-corner
+  distance is under 0.12 of the frame width, "Move back a little" over 0.40, then lighting. These
+  limits are untested UI heuristics.
+- The EAR plot is drawn on a canvas from the pipeline's 20 s ring buffer (no chart library). Gaps
+  break the line; thresholds use distinct dash patterns with text labels; events are shaded bands.
+  A text description is available under "Describe this plot".
+
+### Validation V1 tool (`#v1`)
+
+Plays a local video file and runs the same pipeline on every frame using
+`requestVideoFrameCallback` `mediaTime` as the timestamp, so detections and hand labels share the
+video's own timeline. Calibration uses the first 10 s; labels inside that window are excluded from
+scoring. Frames skipped by the player (`presentedFrames` jumps) are counted and marked as gaps; if
+any occur, analyse again at a lower speed. Labelling is frame by frame with the detections hidden.
+Exports (numbers only): detections, labels, and per-frame EAR CSV. Scoring (`src/blink/v1.ts`) is
+shared by the page and `npm run score:v1`.

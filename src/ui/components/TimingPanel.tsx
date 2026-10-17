@@ -1,3 +1,4 @@
+import type { BlinkSnapshot } from '../../app/blinkPipeline.ts';
 import type { CaptureSnapshot } from '../../app/captureController.ts';
 import type { TimestampSource } from '../../capture/timestampSource.ts';
 
@@ -12,7 +13,19 @@ const fmt = (v: number | null | undefined, digits: number) =>
   v === null || v === undefined || !Number.isFinite(v) ? '-' : v.toFixed(digits);
 
 /** Developer timing readout (PROJECT_SPEC Phase 2 "dev overlay"). Updates at <= 4 Hz. */
-export function TimingPanel({ snapshot }: { snapshot: CaptureSnapshot }) {
+export interface TrackingInfo {
+  blink: BlinkSnapshot;
+  inferenceMs: number | null;
+  delegate: string | null;
+}
+
+export function TimingPanel({
+  snapshot,
+  tracking,
+}: {
+  snapshot: CaptureSnapshot;
+  tracking?: TrackingInfo;
+}) {
   const { timing, settings } = snapshot;
   const rows: [string, string][] = [
     ['Measured rate', `${fmt(timing?.fps, 1)} fps`],
@@ -38,6 +51,27 @@ export function TimingPanel({ snapshot }: { snapshot: CaptureSnapshot }) {
         : '-',
     ],
   ];
+  if (tracking) {
+    const { blink } = tracking;
+    const pose = blink.pose;
+    rows.push(
+      [
+        'Face tracking',
+        `${fmt(tracking.inferenceMs, 1)} ms/frame${tracking.delegate ? ` (${tracking.delegate})` : ''}`,
+      ],
+      [
+        'Face found',
+        blink.faceFoundFraction === null ? '-' : `${fmt(blink.faceFoundFraction * 100, 0)}%`,
+      ],
+      [
+        'Head yaw / pitch / roll',
+        pose
+          ? `${fmt(pose.yawDeg, 0)} / ${fmt(pose.pitchDeg, 0)} / ${fmt(pose.rollDeg, 0)} deg`
+          : '-',
+      ],
+      ['EAR (A / B)', `${fmt(blink.eyeA, 3)} / ${fmt(blink.eyeB, 3)}`],
+    );
+  }
 
   return (
     <div className="timing" aria-label="Frame timing">

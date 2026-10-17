@@ -1,6 +1,6 @@
 import type { CaptureStatus } from '../../app/captureController.ts';
 import { APP_NAME, PRIVACY_BADGE } from '../strings.ts';
-import { HelpIcon, LockIcon, LogoMark, PlayIcon, StopIcon } from '../icons/Icons.tsx';
+import { EyeIcon, HelpIcon, LockIcon, LogoMark, PlayIcon, StopIcon } from '../icons/Icons.tsx';
 import { ThemeToggle } from './ThemeToggle.tsx';
 
 interface HeaderProps {
@@ -8,9 +8,10 @@ interface HeaderProps {
   onStart: () => void;
   onStop: () => void;
   onOpenGuide: () => void;
+  calibrate: { enabled: boolean; label: string; onClick: () => void };
 }
 
-export function Header({ status, onStart, onStop, onOpenGuide }: HeaderProps) {
+export function Header({ status, onStart, onStop, onOpenGuide, calibrate }: HeaderProps) {
   // Stop is offered while waiting for permission too, so the request can be abandoned.
   const active = status === 'running' || status === 'starting';
 
@@ -35,6 +36,17 @@ export function Header({ status, onStart, onStop, onOpenGuide }: HeaderProps) {
             <HelpIcon size={18} />
             <span>Guide</span>
           </button>
+          {status === 'running' ? (
+            <button
+              type="button"
+              className="btn btn-ghost"
+              disabled={!calibrate.enabled}
+              onClick={calibrate.onClick}
+            >
+              <EyeIcon size={18} />
+              <span>{calibrate.label}</span>
+            </button>
+          ) : null}
           {active ? (
             <button type="button" className="btn btn-primary" onClick={onStop}>
               <StopIcon size={18} />

@@ -14,6 +14,8 @@
     "src/capture/frameClock*.ts",
     "src/capture/timestampSource*.ts",
     "src/capture/cameraErrors*.ts",
-    "src/capture/brightness*.ts"
+    "src/capture/brightness*.ts",
+    "src/vision/headPose*.ts",
+    "src/vision/landmarks*.ts"
   ]
 }

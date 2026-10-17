@@ -147,3 +147,59 @@
 - Header is sticky only at >= 720 px; on phones it took a quarter of the screen.
 - Metric cards are one column at 360 px; Amendment 02 asks for two. Left for the Phase 5 polish pass.
 - Timing details are shown by default in development builds and hidden by default in production.
+
+## Phase 3: Landmarks, EAR, blink detection (2026-10-17)
+
+**Status: committed without its acceptance run, at the author's request ("commit and move on").**
+The Phase 3 acceptance criterion, validation V1 run and reported, is **not met yet**; it stays an
+open item to be done before the results are cited anywhere. The author checked the landmarks live
+in the Explorer.
+
+**Verified**
+
+- `npm run check` passes: 30 test files, 341 tests.
+- Synthetic detector tests per PROJECT_SPEC 6.3 (fast blink, slow blink, single-frame dip, long
+  closure, noisy baseline, dropped frames, plus drift, hysteresis, invalid samples, gap flags);
+  results with n in `docs/METHODS.md`.
+- Calibration, metrics, EAR (pixel vs normalised), head pose from both matrix layouts, relative
+  pose gating, the whole pipeline (`blinkPipeline.test.ts`), plot geometry and text alternative,
+  setup hint priority, Explorer index parsing, V1 CSV round trips, scoring, and frame lookup.
+- `npm run score:v1` run on hand-made CSVs: correct counts, the calibration-window exclusion, and
+  the tolerance option.
+- Headless Chrome, fake camera, production build: landmarker loads (GPU); setup goes through all 5
+  steps; with no face the calibration step shows the countdown ring and then the retry message;
+  EAR plot draws and describes itself; Explorer runs and reports bad indices; the V1 tool analysed
+  a 12 s synthetic test-pattern video (296 frames, 5 skipped by the player at 1x) and ended with
+  the calibration-failure message; no horizontal scroll at 360 px; light and dark screenshots
+  reviewed.
+- Live, one person, one laptop webcam (dev server): face found, blink measurement working after
+  the relative-pose fix (confirmed by the author).
+- The MediaPipe usage logger is blocked by the CSP in dev and production (see
+  `docs/ETHICS_AND_PRIVACY.md`).
+
+**Not verified**
+
+- Validation V1 (no recordings or labels yet).
+- Head-pose sign directions (the author checked the Explorer but the directions were not written
+  down).
+- The V1 tool on a real recording with a face (only the failure path ran end to end in a browser).
+- Firefox and Safari; the V1 tool needs `requestVideoFrameCallback` (Chrome and Edge).
+- Reduced-motion behaviour of the plot and ring was not checked in a browser.
+
+**Deviations and decisions**
+
+- **Head-pose gating is relative to the calibration pose** (spec: absolute +-25 deg yaw / +-20 deg
+  pitch). With a laptop camera below eye level, normal viewing read about 19 deg pitch, so almost
+  every frame was rejected. Proposed spec note for 5.3: "limits apply to the change from the pose
+  during calibration". Needs the author's approval to go into PROJECT_SPEC.
+- **Dev server CSP added**: the MediaPipe library tries to send usage logs to Google; the dev
+  server previously had no CSP, so earlier dev sessions may have sent them. Now blocked everywhere.
+- `media-src 'self' blob:` added for the V1 tool's local video playback.
+- Distance hint limits (0.12 / 0.40 of frame width) are untested heuristics. There is no "hold
+  still" hint yet; motion is measured in Phase 4.
+- Hand-label definitions for V1 (start: lid clearly lower; end: fully open) differ from the
+  detector's threshold crossings, so duration error includes a definitional offset. Reported as
+  found.
+- The Explorer and V1 tool are hash routes (`#explorer`, `#v1`) in the same build, not separate
+  pages.
+- "Calibrate" sits in the header while the camera runs; at narrow widths the header buttons wrap.

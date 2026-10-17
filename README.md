@@ -4,10 +4,10 @@ An experimental, fully on-device signal-processing project that estimates **blin
 **pulse rate** from webcam video, with every key algorithm (FFT, filters, resampling, peak
 detection, plots) written by hand and validated against reference data.
 
-> **Status: Phase 2 (capture and timing) complete.** The app opens the camera, shows a mirrored
-> preview with first-run setup, and measures frame timing (Timing details). Blink and pulse
-> measurement are not built yet. The hand-written signal-processing core is in `src/dsp/`. See
-> `PROJECT_SPEC.md` Section 2 for the phase plan.
+> **Status: Phase 3 (blink detection) built, validation pending.** The app tracks face landmarks
+> on the device, calibrates to your open-eye level, and shows blink rate, eye-closed fraction, and
+> a live EAR plot. Its accuracy on real video has not been measured yet (validation V1). Pulse
+> measurement is not built yet. See `PROJECT_SPEC.md` Section 2 for the phase plan.
 
 ## Disclaimer
 
@@ -25,11 +25,18 @@ Requires Node.js 22.12+ or 24+. The camera needs a secure context: `localhost` o
 
 ```sh
 npm install
-npm run dev        # development server (no CSP; hot reload needs inline scripts)
+npm run dev        # development server (CSP header with connections to self only)
 npm run build      # typecheck + production build into dist/ (CSP meta tag injected)
 npm run preview    # serve dist/ to test the production build with its CSP
 npm run check      # typecheck + lint + format check + tests
+npm run score:v1 -- labels.csv detections.csv   # score validation V1 from exported CSVs
 ```
+
+Developer pages: `#explorer` (Landmark Explorer, to check landmark indices on live video) and
+`#v1` (validation V1: analyse a local recording, hand-label blinks, score).
+
+Third-party runtime: MediaPipe tasks-vision 1.1.1 and its face landmarker model, both self-hosted.
+The library has a built-in usage logger that the CSP blocks (see `docs/ETHICS_AND_PRIVACY.md`).
 
 ## Regenerating test fixtures (optional)
 
@@ -62,6 +69,8 @@ explain, every algorithm.
 - Phase 0 (scaffold, tooling, design tokens, layout shell): AI-assisted.
 - Phase 1 (DSP core, reference fixtures, tests): AI-assisted.
 - Phase 2 (camera capture, frame timing, first-run setup, tests): AI-assisted.
+- Phase 3 (landmarks, EAR, calibration, blink detector, plot, Explorer, V1 tool, tests):
+  AI-assisted.
 
 ## License
 

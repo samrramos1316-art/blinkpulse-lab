@@ -42,8 +42,33 @@ export const CAMERA_PRIVACY =
 export const CAMERA_EFFECTS_TIP =
   'Turn off camera effects such as background blur, auto-framing, or face retouching. They change the video and can disturb the measurements.';
 
-export const BRIGHTNESS_HINT = {
-  tooDark: 'Too dark. Try facing a window or a lamp.',
-  ok: 'Lighting looks fine.',
-  unknown: 'Checking the light...',
+export const BLINK_STATUS = {
+  loading: 'Loading face tracking...',
+  error: 'Face tracking could not start. Reload the page to try again.',
+  noFace: 'Face not found. Centre your face in the frame.',
+  headTurned: 'Turn your head towards the screen.',
+  notCalibrated: 'Press Calibrate to start blink measurement. Look at the screen for 10 seconds.',
+  calibrating: 'Calibrating: look at the screen and blink normally.',
+  calibrationFailed:
+    'Calibration needs your face in view. Centre your face, then press Calibrate again.',
+  measuring: 'Measuring blinks.',
+} as const;
+
+export const POSITION_HINT = {
+  loading: 'Loading face tracking...',
+  trackingError: 'Face tracking could not start. Reload the page to try again.',
+  noFace: 'Face not found. Centre your face inside the outline.',
+  tooFar: 'Move a little closer.',
+  tooClose: 'Move back a little so your whole face fits.',
+  tooDark: 'Face the light. Try facing a window or a lamp.',
+  ok: 'Good position.',
+} as const;
+
+export const CALIBRATION_COPY = {
+  intro:
+    'Look at the screen naturally for 10 seconds and blink as you normally do. This sets your personal open-eye level.',
+  running: 'Keep looking at the screen and blink normally.',
+  failed:
+    'Calibration needs your face in view for most of the 10 seconds. Centre your face, then try again.',
+  done: 'Calibration done. You can recalibrate at any time with the Calibrate button.',
 } as const;

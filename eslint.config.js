@@ -16,6 +16,9 @@ const PURE_DIRS = [
   'src/capture/timestampSource*.ts',
   'src/capture/cameraErrors*.ts',
   'src/capture/brightness*.ts',
+  // Pure parts of vision/.
+  'src/vision/headPose*.ts',
+  'src/vision/landmarks*.ts',
 ];
 
 export default defineConfig([

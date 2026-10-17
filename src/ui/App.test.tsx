@@ -36,7 +36,7 @@ describe('App first run', () => {
   const html = renderToString(<App initialSetupOpen />);
 
   it('shows the setup guide instead of the metric cards', () => {
-    expect(html).toContain('Step 1 of 4');
+    expect(html).toContain('Step 1 of 5');
     expect(html).toContain('Get started');
     expect(html).toContain('Skip setup');
     expect(html).not.toContain('metric-card__value');

@@ -1,6 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { App } from './ui/App.tsx';
+import { Root } from './ui/Root.tsx';
 import { applyThemePreference, readThemePreference } from './ui/theme/theme.ts';
 import './ui/theme/tokens.css';
 import './ui/theme/base.css';
@@ -14,6 +14,6 @@ if (!rootEl) throw new Error('Missing #root element');
 
 createRoot(rootEl).render(
   <StrictMode>
-    <App />
+    <Root />
   </StrictMode>,
 );

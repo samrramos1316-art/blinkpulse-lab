@@ -9,3 +9,7 @@ recordings/
 *.webm
 *.mp4
 .venv/
+
+# Copied from node_modules by tools/copy-mediapipe-assets.mjs
+public/wasm/*
+!public/wasm/.gitkeep

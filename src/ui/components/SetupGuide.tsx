@@ -1,22 +1,36 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { CALIBRATION_MS, type BlinkSnapshot } from '../../app/blinkPipeline.ts';
 import type { CaptureSnapshot } from '../../app/captureController.ts';
 import { useBrightness } from '../../app/useBrightness.ts';
+import type { LandmarkerStatus } from '../../app/useBlink.ts';
 import { captureStatusText } from '../captureStatus.ts';
-import { BRIGHTNESS_HINT, CAMERA_EFFECTS_TIP, CAMERA_PRIVACY } from '../copy.ts';
+import { CALIBRATION_COPY, CAMERA_EFFECTS_TIP, CAMERA_PRIVACY, POSITION_HINT } from '../copy.ts';
 import { AlertIcon, CheckIcon, InfoIcon, LockIcon, SunLightIcon } from '../icons/Icons.tsx';
 import { SETUP_STEPS, type SetupStep } from '../setup.ts';
+import { positionHint } from '../setupHints.ts';
 import { PRIVACY_BADGE } from '../strings.ts';
 
 interface SetupGuideProps {
   snapshot: CaptureSnapshot;
   getVideo: () => HTMLVideoElement | null;
   onStartCamera: () => void;
+  blink: BlinkSnapshot;
+  tracking: LandmarkerStatus;
+  onCalibrate: () => void;
   /** Called when setup is finished or skipped. */
   onClose: () => void;
 }
 
-/** First-run setup (SPEC_AMENDMENT_02 Part 3), Phase 2 steps: welcome, camera, position. */
-export function SetupGuide({ snapshot, getVideo, onStartCamera, onClose }: SetupGuideProps) {
+/** First-run setup (SPEC_AMENDMENT_02 Part 3): welcome, camera, position, calibrate, done. */
+export function SetupGuide({
+  snapshot,
+  getVideo,
+  onStartCamera,
+  blink,
+  tracking,
+  onCalibrate,
+  onClose,
+}: SetupGuideProps) {
   const [step, setStep] = useState<SetupStep>('welcome');
   const headingRef = useRef<HTMLHeadingElement>(null);
   const firstRender = useRef(true);
@@ -140,16 +154,7 @@ export function SetupGuide({ snapshot, getVideo, onStartCamera, onClose }: Setup
             <li>Light your face from the front; avoid a bright window behind you.</li>
           </ul>
           {running ? (
-            <p className="setup__live" role="status" data-tone={brightness}>
-              {brightness === 'ok' ? (
-                <CheckIcon size={18} />
-              ) : brightness === 'tooDark' ? (
-                <SunLightIcon size={18} />
-              ) : (
-                <InfoIcon size={18} />
-              )}
-              <span>{BRIGHTNESS_HINT[brightness]}</span>
-            </p>
+            <LiveHint hint={positionHint(blink, brightness, tracking)} />
           ) : (
             <p className="setup__alert" role="alert">
               <AlertIcon size={18} />
@@ -170,7 +175,7 @@ export function SetupGuide({ snapshot, getVideo, onStartCamera, onClose }: Setup
               type="button"
               className="btn btn-primary"
               onClick={() => {
-                go('done');
+                go('calibrate');
               }}
             >
               Next
@@ -179,6 +184,96 @@ export function SetupGuide({ snapshot, getVideo, onStartCamera, onClose }: Setup
         </>
       );
       break;
+
+    case 'calibrate': {
+      const c = blink.calibration;
+      const canCalibrate = running && tracking === 'ready' && c.phase !== 'running';
+      const secondsLeft =
+        c.phase === 'running'
+          ? Math.max(0, Math.ceil((CALIBRATION_MS * (1 - c.progress)) / 1000))
+          : 0;
+      body = (
+        <>
+          <StepHeading ref={headingRef}>Calibrate</StepHeading>
+          <div className="calibrate">
+            <ProgressRing
+              progress={c.phase === 'running' ? c.progress : c.phase === 'done' ? 1 : 0}
+              label={
+                c.phase === 'running'
+                  ? `${secondsLeft.toFixed(0)} s`
+                  : c.phase === 'done'
+                    ? 'Done'
+                    : `${(CALIBRATION_MS / 1000).toFixed(0)} s`
+              }
+            />
+            <div className="calibrate__text">
+              {c.phase === 'running' ? (
+                <p role="status">{CALIBRATION_COPY.running}</p>
+              ) : c.phase === 'done' ? (
+                <p className="setup__live" role="status" data-tone="ok">
+                  <CheckIcon size={18} />
+                  <span>
+                    {`${CALIBRATION_COPY.done} Open-eye level ${c.result.baseline.toFixed(2)} from ${c.result.n.toFixed(0)} frames.`}
+                  </span>
+                </p>
+              ) : (
+                <p>{CALIBRATION_COPY.intro}</p>
+              )}
+              {c.phase === 'failed' ? (
+                <p className="setup__alert" role="alert">
+                  <AlertIcon size={18} />
+                  <span>{CALIBRATION_COPY.failed}</span>
+                </p>
+              ) : null}
+              {!running ? (
+                <p className="setup__alert" role="alert">
+                  <AlertIcon size={18} />
+                  <span>{captureStatusText(snapshot).text}</span>
+                </p>
+              ) : c.phase === 'done' ? null : (
+                <LiveHint hint={positionHint(blink, 'unknown', tracking)} />
+              )}
+            </div>
+          </div>
+          <Actions>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => {
+                go('position');
+              }}
+            >
+              Back
+            </button>
+            {c.phase === 'done' ? (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => {
+                  go('done');
+                }}
+              >
+                Next
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={!canCalibrate}
+                onClick={onCalibrate}
+              >
+                {c.phase === 'running'
+                  ? 'Calibrating...'
+                  : c.phase === 'failed'
+                    ? 'Try again'
+                    : 'Start calibration'}
+              </button>
+            )}
+          </Actions>
+        </>
+      );
+      break;
+    }
 
     case 'done':
       body = (
@@ -193,7 +288,7 @@ export function SetupGuide({ snapshot, getVideo, onStartCamera, onClose }: Setup
               type="button"
               className="btn btn-ghost"
               onClick={() => {
-                go('position');
+                go('calibrate');
               }}
             >
               Back
@@ -246,4 +341,49 @@ function StepHeading({
 
 function Actions({ children }: { children: ReactNode }) {
   return <div className="setup__actions">{children}</div>;
+}
+
+function LiveHint({ hint }: { hint: keyof typeof POSITION_HINT }) {
+  const tone = hint === 'ok' ? 'ok' : hint === 'tooDark' ? 'tooDark' : 'unknown';
+  return (
+    <p className="setup__live" role="status" data-tone={tone}>
+      {hint === 'ok' ? (
+        <CheckIcon size={18} />
+      ) : hint === 'tooDark' ? (
+        <SunLightIcon size={18} />
+      ) : (
+        <InfoIcon size={18} />
+      )}
+      <span>{POSITION_HINT[hint]}</span>
+    </p>
+  );
+}
+
+/** Calibration progress ring with the countdown in the middle (SPEC_AMENDMENT_02 Part 3). */
+function ProgressRing({ progress, label }: { progress: number; label: string }) {
+  const r = 34;
+  const circumference = 2 * Math.PI * r;
+  return (
+    <div
+      className="ring"
+      role="progressbar"
+      aria-label="Calibration progress"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(progress * 100)}
+    >
+      <svg viewBox="0 0 80 80" aria-hidden="true" focusable="false">
+        <circle className="ring__track" cx="40" cy="40" r={r} />
+        <circle
+          className="ring__bar"
+          cx="40"
+          cy="40"
+          r={r}
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference * (1 - progress)}
+        />
+      </svg>
+      <span className="ring__label tabular">{label}</span>
+    </div>
+  );
 }

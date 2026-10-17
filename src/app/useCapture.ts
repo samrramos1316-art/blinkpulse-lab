@@ -41,22 +41,34 @@ export interface Capture {
   snapshot: CaptureSnapshot;
   start: () => void;
   stop: () => void;
+  /** Per-frame callback (not throttled). Returns an unsubscribe function. */
+  addFrameListener: CaptureController['addFrameListener'];
 }
 
 export function useCapture(): Capture {
-  // The element lives in a closure: the controller reads it from event handlers and frame
-  // callbacks, never during render.
-  const [{ controller, videoRef, getVideo }] = useState(() => {
+  // Created once, so every function below is stable across renders. The element lives
+  // in a closure: the controller reads it from event handlers and frame callbacks,
+  // never during render.
+  const [api] = useState(() => {
     let video: HTMLVideoElement | null = null;
-    const get = () => video;
+    const getVideo = () => video;
+    const controller = new CaptureController(browserDeps(getVideo));
     return {
-      controller: new CaptureController(browserDeps(get)),
+      controller,
+      getVideo,
       videoRef: (el: HTMLVideoElement | null) => {
         video = el;
       },
-      getVideo: get,
+      start: () => {
+        void controller.start();
+      },
+      stop: () => {
+        controller.stop();
+      },
+      addFrameListener: controller.addFrameListener.bind(controller),
     };
   });
+  const { controller } = api;
   const snapshot = useSyncExternalStore(
     controller.subscribe,
     controller.getSnapshot,
@@ -75,14 +87,11 @@ export function useCapture(): Capture {
   }, [controller]);
 
   return {
-    videoRef,
-    getVideo,
+    videoRef: api.videoRef,
+    getVideo: api.getVideo,
     snapshot,
-    start: () => {
-      void controller.start();
-    },
-    stop: () => {
-      controller.stop();
-    },
+    start: api.start,
+    stop: api.stop,
+    addFrameListener: api.addFrameListener,
   };
 }
