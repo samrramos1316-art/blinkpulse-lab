@@ -1,0 +1,11 @@
+node_modules/
+dist/
+coverage/
+package-lock.json
+public/models/
+public/wasm/
+test/fixtures/
+# Spec documents are authored by hand; do not reformat them.
+CLAUDE*.md
+PROJECT_SPEC*.md
+SPEC_AMENDMENT_*.md

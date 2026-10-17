@@ -1,0 +1,133 @@
+/*
+ * Design tokens (SPEC_AMENDMENT_02 Part 2). Calm minimal.
+ * This is the ONLY file allowed to contain raw colour values (checked by test/designRules.test.ts).
+ * Contrast of every text/background pair is checked by test/tokens.test.ts.
+ *
+ * Structure (the contrast test relies on it):
+ *   1. `:root`                         light colours + all non-colour tokens
+ *   2. `@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) }`  dark colours
+ *   3. `:root[data-theme='dark']`      dark colours again (manual override; must match block 2)
+ */
+
+:root {
+  color-scheme: light;
+
+  /* Colours: light */
+  --color-bg: #f5f7f9;
+  --color-surface: #ffffff;
+  --color-surface-raised: #fbfcfd;
+  --color-surface-sunken: #eef1f4;
+  --color-border: #e1e5ea;
+  --color-text: #18202b;
+  --color-text-muted: #556070;
+  --color-accent: #0f6b64;
+  --color-accent-strong: #0f6b64;
+  --color-on-accent: #ffffff;
+  --color-accent-soft: #e3f2f0;
+  --color-focus: #1559b8;
+  --color-quality-good: #17713a;
+  --color-quality-fair: #8a5a00;
+  --color-quality-poor: #b3261e;
+  --shadow-color: 220 30% 20%;
+
+  /* Spacing: 4 px base */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  /* Elevation */
+  --shadow-1: 0 1px 2px hsl(var(--shadow-color) / 0.06), 0 1px 3px hsl(var(--shadow-color) / 0.08);
+  --shadow-2: 0 2px 6px hsl(var(--shadow-color) / 0.06), 0 8px 24px hsl(var(--shadow-color) / 0.08);
+
+  /* Type */
+  --font-sans:
+    system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Mono', 'SF Mono', Menlo, Consolas, monospace;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.5rem;
+  --text-metric: 2.25rem;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --line-tight: 1.2;
+  --line-normal: 1.5;
+
+  /* Motion */
+  --duration-fast: 150ms;
+  --duration-base: 200ms;
+  --duration-number: 300ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Layout */
+  --gutter: 16px;
+  --content-max: 1280px;
+  --focus-ring: 0 0 0 3px var(--color-focus);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+
+    /* Colours: dark */
+    --color-bg: #0e1217;
+    --color-surface: #151a21;
+    --color-surface-raised: #1b212a;
+    --color-surface-sunken: #11161c;
+    --color-border: #2a313b;
+    --color-text: #e7eaef;
+    --color-text-muted: #9ba5b3;
+    --color-accent: #5fd4c6;
+    --color-accent-strong: #5fd4c6;
+    --color-on-accent: #08201d;
+    --color-accent-soft: #143430;
+    --color-focus: #8cc4ff;
+    --color-quality-good: #6fdc94;
+    --color-quality-fair: #f2c65c;
+    --color-quality-poor: #ff8f86;
+    --shadow-color: 220 40% 2%;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* Colours: dark */
+  --color-bg: #0e1217;
+  --color-surface: #151a21;
+  --color-surface-raised: #1b212a;
+  --color-surface-sunken: #11161c;
+  --color-border: #2a313b;
+  --color-text: #e7eaef;
+  --color-text-muted: #9ba5b3;
+  --color-accent: #5fd4c6;
+  --color-accent-strong: #5fd4c6;
+  --color-on-accent: #08201d;
+  --color-accent-soft: #143430;
+  --color-focus: #8cc4ff;
+  --color-quality-good: #6fdc94;
+  --color-quality-fair: #f2c65c;
+  --color-quality-poor: #ff8f86;
+  --shadow-color: 220 40% 2%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-number: 0ms;
+  }
+}

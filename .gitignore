@@ -1,0 +1,10 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+.DS_Store
+*.log
+# Never commit recordings or media (privacy rule)
+recordings/
+*.webm
+*.mp4

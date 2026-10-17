@@ -1,0 +1,11 @@
+{
+  // Pure logic shared by the app, tests, and the offline CLI.
+  // No DOM lib and no ambient types: any use of window/document/React fails here.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.pure.tsbuildinfo",
+    "lib": ["ES2023"],
+    "types": []
+  },
+  "include": ["src/dsp", "src/blink", "src/rppg"]
+}
