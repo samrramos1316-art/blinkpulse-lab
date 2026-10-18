@@ -2,9 +2,12 @@ import { useState } from 'react';
 import { useBlink } from '../app/useBlink.ts';
 import { useCapture } from '../app/useCapture.ts';
 import { blinkRateCard, closedFractionCard } from './blinkDisplay.ts';
+import { pulseCard } from './pulseDisplay.ts';
 import { liveStatusText } from './captureStatus.ts';
 import { EyeIcon, GaugeIcon, PulseIcon, TimerIcon } from './icons/Icons.tsx';
 import { EarPlot } from './components/EarPlot.tsx';
+import { FaceOverlay } from './components/FaceOverlay.tsx';
+import { PulsePanel } from './components/PulsePanel.tsx';
 import { Footer } from './components/Footer.tsx';
 import { Header } from './components/Header.tsx';
 import { MetricCard } from './components/MetricCard.tsx';
@@ -27,8 +30,8 @@ export function App({ initialSetupOpen }: AppProps) {
   const [showTiming, setShowTiming] = useState(import.meta.env.DEV);
 
   const live = capture.snapshot.status === 'running';
-  // Pulse arrives in Phase 4; never show a placeholder number.
-  const pulseStatus = live ? 'Available in a later version' : 'Not started';
+  const pulse = pulseCard(blink.pulse, live, blink.snapshot.faceStatus);
+  const regionLevels = Object.fromEntries((blink.pulse?.regions ?? []).map((r) => [r.id, r.level]));
   const rateCard = blinkRateCard(blink.snapshot, live);
   const closedCard = closedFractionCard(blink.snapshot, live);
   const start = () => {
@@ -69,7 +72,12 @@ export function App({ initialSetupOpen }: AppProps) {
               blink: blink.snapshot,
               inferenceMs: blink.inferenceMs,
               delegate: blink.landmarker.delegate,
+              processingMs: blink.processingMs,
+              cameraLock: blink.cameraLock,
             }}
+            overlay={
+              <FaceOverlay getOverlay={blink.getOverlay} levels={regionLevels} active={live} />
+            }
           />
           {setupOpen ? (
             <SetupGuide
@@ -96,9 +104,10 @@ export function App({ initialSetupOpen }: AppProps) {
               <MetricCard
                 icon={<PulseIcon />}
                 label={METRIC.pulseRate}
-                value="-"
+                value={pulse.value}
                 unit="bpm"
-                status={pulseStatus}
+                status={pulse.status}
+                quality={pulse.level}
               />
               <MetricCard
                 icon={<TimerIcon />}
@@ -132,7 +141,17 @@ export function App({ initialSetupOpen }: AppProps) {
                 id: 'pulse',
                 label: 'Pulse',
                 render: () => (
-                  <p className="plots__empty">Pulse plots arrive in a later version.</p>
+                  <PulsePanel
+                    pulse={blink.pulse}
+                    record={{
+                      live,
+                      recording: blink.recording,
+                      start: blink.startRecording,
+                      stop: blink.stopRecording,
+                      pending: blink.pendingTrace,
+                      clearPending: blink.clearPendingTrace,
+                    }}
+                  />
                 ),
               },
               {

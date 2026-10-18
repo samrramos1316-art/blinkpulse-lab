@@ -4,10 +4,11 @@ An experimental, fully on-device signal-processing project that estimates **blin
 **pulse rate** from webcam video, with every key algorithm (FFT, filters, resampling, peak
 detection, plots) written by hand and validated against reference data.
 
-> **Status: Phase 3b (blink timeline) built; Phase 3 validation V1 pending.** The app tracks face landmarks
-> on the device, calibrates to your open-eye level, and shows blink rate, eye-closed fraction, and
-> a live EAR plot, plus a per-minute session timeline with numeric export. Its accuracy on real
-> video has not been measured yet (validation V1). Pulse measurement is not built yet. See `PROJECT_SPEC.md` Section 2 for the phase plan.
+> **Status: Phase 4 (pulse rate) built; validations V1 and V2 pending.** The app tracks face
+> landmarks on the device and shows blink rate, eye-closed fraction, a per-minute blink timeline,
+> and an estimated pulse rate from three skin regions with a quality level. None of these has been
+> validated on real people yet; the numbers so far come from synthetic signals (see
+> `docs/METHODS.md`). See `PROJECT_SPEC.md` Section 2 for the phase plan.
 
 ## Disclaimer
 
@@ -30,10 +31,13 @@ npm run build      # typecheck + production build into dist/ (CSP meta tag injec
 npm run preview    # serve dist/ to test the production build with its CSP
 npm run check      # typecheck + lint + format check + tests
 npm run score:v1 -- labels.csv detections.csv   # score validation V1 from exported CSVs
+npm run eval -- frames.csv reference.csv       # offline pulse evaluation (V2)
+npm run ppg:ref -- ppg.csv reference.csv       # reference BPM from a ground-truth PPG (V2a)
 ```
 
-Developer pages: `#explorer` (Landmark Explorer, to check landmark indices on live video) and
-`#v1` (validation V1: analyse a local recording, hand-label blinks, score).
+Developer pages: `#explorer` (Landmark Explorer, to check landmark indices on live video),
+`#v1` (validation V1: analyse a local recording, hand-label blinks, score), and `#v2` (validation
+V2a: pulse trace from a local video file).
 
 Third-party runtime: MediaPipe tasks-vision 1.1.1 and its face landmarker model, both self-hosted.
 The library has a built-in usage logger that the CSP blocks (see `docs/ETHICS_AND_PRIVACY.md`).
@@ -72,6 +76,8 @@ explain, every algorithm.
 - Phase 3 (landmarks, EAR, calibration, blink detector, plot, Explorer, V1 tool, tests):
   AI-assisted.
 - Phase 3b (per-minute session timeline, plots, export, tests): AI-assisted.
+- Phase 4 (rPPG pulse pipeline, fusion, quality, plots, trace recording, eval CLI, tests):
+  AI-assisted.
 
 ## License
 

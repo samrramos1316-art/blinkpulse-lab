@@ -290,3 +290,137 @@ calibration and is cut into one-minute bins.
 - The view shows four per-minute plots (rate, median duration, eye-closed fraction, long
   closures), a coverage bar (solid vs hatched), a per-minute table, and text descriptions of each
   plot. Export asks for confirmation and states what the file contains.
+
+## Pulse rate (`src/rppg/`, Phase 4)
+
+### Regions (PROJECT_SPEC 5.4, SPEC_AMENDMENT_01 Patch A)
+
+| Region                  | Definition                                                                     | Canonical geometry | Live, Landmark Explorer |
+| ----------------------- | ------------------------------------------------------------------------------ | ------------------ | ----------------------- |
+| Forehead                | Parallelogram: brow points 105, 334 moved up 25% and 65% of the vector 9 -> 10 | done               | **not yet done**        |
+| Right cheek (subject's) | `[118, 205, 36, 119]`                                                          | done               | **not yet done**        |
+| Left cheek (subject's)  | `[347, 425, 266, 348]`                                                         | done               | **not yet done**        |
+
+- Forehead: on MediaPipe's `canonical_face_model.obj` (468 vertices), 10 is the topmost midline
+  vertex, 9 the midline vertex at brow level, 105/334 a mirror-symmetric brow pair (x = +-3.99 cm),
+  107/336 the inner brow points. The region is 1.35 cm high and 7.97 cm wide on the canonical face
+  (10.8 cm2).
+- Cheeks (not from memory): a written rule on the canonical model, using the package's
+  `FACE_LANDMARKS_RIGHT_EYE`/`LEFT_EYE` and `LIPS` contours as anchors. Keep vertices with
+  2.6 <= |x| <= 4.45 cm (outside the side of the nose at |x| = 1.7-2.3 cm; inside the outer eye
+  corner at 4.45 cm) and -2.0 <= y <= 1.2 cm (above the lips, whose top is at y = -3.33 cm; below
+  the eye contour, whose lowest point is at y = 2.29 cm); the polygon is their convex hull. The two
+  hulls are exact mirror images (2.29 cm2 each).
+- Live check: `#explorer`, preset "Pulse regions". Pending.
+
+### Pixels
+
+For each region, only its bounding box is drawn from the video into a small canvas
+(`willReadFrequently`) and read with `getImageData`; the polygon mask is applied in code (pixel
+centres, even-odd rule). Rejected pixels: any channel >= 250 (saturated) or luma < 20 (dark). Per
+frame: mean R, G, B of accepted pixels, mask coverage (accepted / polygon pixels), saturated
+fraction, mean luma. Frames with no face or a head pose outside the calibration-relative limits are
+not used.
+
+### Chain (per region, every 1 s, 10 s window)
+
+1. Resample to 30 Hz (bin-averaging from >= 45 fps, else linear). A hole > 250 ms, a FrameClock
+   gap flag, or data missing at either end invalidates the window.
+2. POS exactly as in PROJECT_SPEC 5.4 (window round(1.6 fs) = 48 samples, overlap-add).
+3. Butterworth band-pass 0.7-3.0 Hz (the Phase 1 design: -3.01 dB at both cut-offs, -67.7 dB at
+   0.1 Hz, -42.7 dB at 8 Hz, single pass), applied with `filtfilt`.
+4. Linear detrend, Hann window, zero-pad to 4096, FFT; strongest peak in 0.7-3.0 Hz with parabolic
+   refinement of log power; BPM = 60 f. Resolution: a 10 s window resolves about 1/T = 0.1 Hz
+   (6 BPM); zero padding only interpolates the spectrum, so accuracy depends on signal-to-noise
+   and interpolation, not on the padding length.
+5. SQI = (power within +-0.1 Hz of the peak + within +-0.1 Hz of its second harmonic) / power in
+   0.7-3.0 Hz. Harmonic power counts only inside the band, so the SQI stays in 0..1.
+6. Time-domain cross-check: peaks of the filtered signal (minimum spacing 0.33 s, prominence >=
+   0.5 SD of the signal), BPM = 60 / median inter-beat interval (needs 3 peaks). A difference
+   > 8 BPM lowers the quality one step.
+
+### Quality and fusion
+
+- Levels from the SQI: Good >= 0.7, Fair >= 0.5, else Poor. Each of motion, sudden lighting
+  change, frame rate < 20 fps, and cross-check disagreement lowers the level one step. Below
+  15 fps there is no estimate.
+- How the SQI levels were set (synthetic data only, 10 s windows):
+  - Noise-only windows at 30 fps (no pulse, n = 400): SQI median 0.276, 95th percentile 0.446,
+    99th percentile 0.517, maximum 0.589.
+  - Pulse windows at 24/30/60 fps, noise sd 0.3-1.0, 5 rates from 50 to 170 BPM (n = 900): of the
+    windows with SQI >= 0.4, 2.7% were off by more than 5 BPM; with SQI >= 0.5, 0% (372 kept).
+  - Frozen before V2b (PROJECT_SPEC 7.1), not tuned on its results.
+- Other starting values (untested): region flags at saturated fraction > 5%, mean luma < 40,
+  mask coverage < 60% (Patch A); lighting change at a frame-to-frame luma change > 5%; motion when
+  more than 10% of the window's frames move the nose tip (landmark 1) faster than 0.5 inter-ocular
+  distances per second (outer eye corners 33 and 263).
+- Fusion as Patch A: keep Fair-or-better regions without region flags; SQI-weighted median;
+  agreement = max - min; one region caps the level at Fair; agreement > 8 BPM lowers it one step.
+  A value is shown only at Fair or better.
+- Smoothing: median of the last 5 accepted estimates; an estimate > 12 BPM from that median is
+  held and accepted (with the held one) only if the next is within 6 BPM of it (the 6 BPM is a
+  starting value). After 5 hops without a shown value the history is cleared.
+
+### Camera controls
+
+About 3 s after start, the app tries to lock exposure and white balance (W3C Image Capture:
+`exposureMode` / `whiteBalanceMode` = `manual` with the current `exposureTime` /
+`colorTemperature`, as advanced constraints). Never required; Timing details show the result.
+Chrome's fake camera has no such controls; real cameras are untested.
+
+### Synthetic tests (PROJECT_SPEC 6.2)
+
+RGB traces from `tools/synth.ts`: pulse at a known rate with a second harmonic, relative amplitude
+0.5% in green along an illustrative skin direction (R 0.45, G 1, B 0.65; not measured), Gaussian
+noise in pixel units, illumination drift, a shared multiplicative artefact, timestamp jitter, and
+dropped frames.
+
+- 10 s windows, noise sd 0.2, +-3 ms jitter, drift 5%/min, rates 50/72/95/130/170 BPM x 10 seeds
+  (n = 50 per frame rate): mean / max absolute error 0.36 / 0.87 BPM at 24 fps, 0.27 / 1.16 BPM at
+  30 fps, 0.26 / 0.78 BPM at 60 fps. The test asserts <= 2 BPM.
+- Clean 72 BPM: error < 0.2 BPM, SQI > 0.85, time-domain estimate within 3 BPM.
+- Dropped-frame runs of 100 and 200 ms are bridged (error <= 2 BPM); a 400 ms hole invalidates the
+  window.
+- POS vs raw green with a shared 2% artefact at 1.1 Hz and 1.6 Hz (n = 20 each): mean error
+  0.32 / 0.33 BPM for POS vs 6.83 / 23.98 BPM for green (tests assert < 1 and > 5).
+- Patch A: three regions at one rate with different noise (fused error <= median single-region
+  error; the noise-only region excluded); two regions at 70 BPM plus one at 115 BPM (fused within
+  2 BPM, disagreement flagged); all regions noise only ("-" with a reason); a frame gap invalidates
+  every region for 10 s.
+
+### End-to-end browser test (synthetic face)
+
+With no face video available, MediaPipe's canonical mesh was rendered (Lambert shading, darker
+brows, red lips, white eyes; a test asset kept outside the repository) with the skin colour
+modulated at a known rate (1.5% amplitude, noise sd 1 level, lossless y4m) and played as Chrome's
+fake camera into the production build:
+
+- 72 BPM video: card 72 BPM, Quality Good, all three regions Good.
+- 108 BPM video: 108 BPM, Good, all three regions.
+- A 40 s numeric trace recorded in the app and replayed with `npm run eval` against a 108 BPM
+  reference: 30 estimates, MAE 0.12 BPM, Bland-Altman bias -0.12 BPM, 95% limits -0.54 to
+  0.31 BPM.
+- Per-frame processing outside face tracking: 1.20 ms median, 2.91 ms 95th percentile
+  (120-frame window, headless Chrome on the development laptop). In Node, one 3-region estimate
+  took 2.19 ms median, 2.92 ms p95, 3.99 ms max (n = 200).
+
+This shows the pipeline works end to end. It says nothing about accuracy on real skin; that is
+what V2 measures.
+
+### Video files and reference signals (V2a tooling)
+
+- `#v2` plays a local video file and runs, per decoded frame (`requestVideoFrameCallback`, media
+  time), the same face tracking, calibration-relative gating, regions, pixel reading
+  (`src/app/pulseFrame.ts`, shared with the live app), and `PulseEstimator`. The frames CSV uses
+  the video's own media time as `t_ms`. Frames skipped by the player are marked as gaps.
+- `npm run ppg:ref` (`src/rppg/reference.ts`) turns a contact PPG signal (`t_ms,ppg`) into
+  `t_ms,bpm`: the same 10 s windows ending at 1 s steps, resampling to 30 Hz (hole > 250 ms = no
+  reading), band-pass, Hann/FFT peak with parabolic refinement, applied to the PPG minus its mean
+  (estimator method `raw`). Tests: rates 66 and 90 BPM tracked within 1 BPM in windows inside one
+  rate, a 500 ms hole skipped, CSV round trip.
+- End-to-end check (synthetic face as above at 84 BPM, 40 s, lossless VP9 WebM, played at 0.5x in
+  headless Chrome on the production build): 1179 frames, 16 frames skipped by the player in one
+  hole at start-up (marked as a gap), 29 of 30 estimate hops shown. Against the reference from the
+  rendered pulse waveform via `npm run ppg:ref`: MAE 0.01 BPM, Bland-Altman bias 0.00 BPM, 95%
+  limits -0.02 to 0.02 BPM (fused, n = 28 paired); each single region MAE <= 0.02 BPM. This tests
+  the tooling and time alignment only, not accuracy on real skin.

@@ -19,7 +19,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "check": "npm run typecheck && npm run lint && npm run test",
-    "score:v1": "node tools/score_v1.ts"
+    "score:v1": "node tools/score_v1.ts",
+    "eval": "node tools/eval_cli.ts",
+    "ppg:ref": "node tools/ppg_to_ref.ts"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "1.1.1",

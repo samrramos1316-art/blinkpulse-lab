@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react';
+import type { QualityLevel } from '../../rppg/quality.ts';
+import { METRIC } from '../strings.ts';
 
 interface MetricCardProps {
   icon: ReactNode;
@@ -8,9 +10,13 @@ interface MetricCardProps {
   unit?: string;
   /** One-line plain-language status under the value. */
   status: string;
+  /** Quality chip (text plus a shape per level, never colour alone). */
+  quality?: QualityLevel | null;
 }
 
-export function MetricCard({ icon, label, value, unit, status }: MetricCardProps) {
+const CHIP_MARK: Record<QualityLevel, string> = { good: '●', fair: '◐', poor: '○' };
+
+export function MetricCard({ icon, label, value, unit, status, quality }: MetricCardProps) {
   return (
     <article className="card metric-card">
       <h2 className="metric-card__label">
@@ -21,6 +27,12 @@ export function MetricCard({ icon, label, value, unit, status }: MetricCardProps
         <span className="tabular">{value}</span>
         {unit ? <span className="metric-card__unit">{unit}</span> : null}
       </p>
+      {quality ? (
+        <p className="quality-chip" data-level={quality}>
+          <span aria-hidden="true">{CHIP_MARK[quality]}</span>
+          {METRIC.quality[quality]}
+        </p>
+      ) : null}
       <p className="metric-card__status">{status}</p>
     </article>
   );

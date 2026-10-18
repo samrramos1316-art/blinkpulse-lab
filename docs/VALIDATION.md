@@ -22,3 +22,33 @@ Procedure:
    no-glasses at >= 30 fps.
 
 Results: none yet.
+
+## V2: Pulse rate (PROJECT_SPEC 7.3)
+
+**Status: not run yet.** The tools are ready; the datasets and live recordings need the author.
+
+Parameters are frozen from the start of V2 (PROJECT_SPEC 7.1): the SQI levels, flag thresholds,
+and fusion rules listed in `docs/METHODS.md` ("Pulse rate").
+
+**V2a (public datasets):** check availability, licence, and access terms first (e.g. UBFC-rPPG,
+PURE); do not redistribute. Per video:
+
+1. If the browser cannot play the dataset's format, convert it to H.264 MP4 or WebM at the
+   highest quality (lossless VP9 if possible) and keep the frame rate. Record the conversion; lossy
+   compression weakens the pulse signal and must be reported as a condition of the result.
+2. Open the app at `#v2`, pick the file, Analyse at 0.5x (analyse again slower if frames were
+   skipped), and Export frames CSV. `t_ms` is the video's own time in milliseconds.
+3. Write the dataset's ground-truth pulse signal as `t_ms,ppg` in the same time base (this step
+   depends on the dataset's file format and is done by hand or a small script), then
+   `npm run ppg:ref -- ppg.csv reference.csv`.
+4. `npm run eval -- frames.csv reference.csv` reports MAE, RMSE, Pearson r, % within +-5 and +-3 BPM,
+   and Bland-Altman bias and limits, fused and for each single region.
+
+**V2b (live, reference device):** seated, still, 3-5 minutes per condition (good front light, dim
+light, screen light only, slow natural head movement). In the app: Pulse tab, "Record numeric
+trace...", then save. Log the reference device every 10 s as `wall_time_ms,bpm` (milliseconds since
+1970, e.g. read from a video of the device next to a clock). Run `npm run eval` on the frames CSV
+with that log. Report per condition and per participant, including failures, with a Bland-Altman
+plot.
+
+Results: none yet.

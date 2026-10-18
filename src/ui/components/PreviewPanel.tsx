@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { CaptureSnapshot } from '../../app/captureController.ts';
 import { captureStatusText, type StatusText } from '../captureStatus.ts';
 import { AlertIcon, InfoIcon } from '../icons/Icons.tsx';
@@ -11,6 +12,8 @@ interface PreviewPanelProps {
   /** Status line override (face tracking, calibration); defaults to the camera status. */
   status?: StatusText;
   tracking?: TrackingInfo;
+  /** Drawn over the video (face overlay). */
+  overlay?: ReactNode;
 }
 
 export function PreviewPanel({
@@ -20,6 +23,7 @@ export function PreviewPanel({
   onToggleTiming,
   status: statusOverride,
   tracking,
+  overlay,
 }: PreviewPanelProps) {
   const live = snapshot.status === 'running';
   const hasTiming = snapshot.timing !== null || live;
@@ -41,6 +45,7 @@ export function PreviewPanel({
           aria-label="Live camera preview, mirrored"
           hidden={!live}
         />
+        {live ? overlay : null}
         <svg className="preview__guide" viewBox="0 0 200 150" aria-hidden="true" focusable="false">
           <ellipse cx="100" cy="72" rx="38" ry="50" />
         </svg>

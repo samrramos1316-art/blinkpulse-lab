@@ -158,3 +158,72 @@ export function truthEvents(
 export function typicalBlink(atMs: number, scale = 1): BlinkShape {
   return { atMs, closeMs: 100 * scale, holdMs: 50 * scale, openMs: 150 * scale, minRatio: 0.15 };
 }
+
+/**
+ * Synthetic RGB trace for rPPG tests (PROJECT_SPEC 6.2).
+ *
+ * Each channel = mean_k * (1 + pulse_k(t) + artefact(t)) + noise. The pulse is a
+ * sinusoid at `bpm` plus a second harmonic, with a relative amplitude per channel
+ * along `pulseDir` (normalised skin pulse direction; the default is an
+ * illustrative G-dominant direction, not a measured one). The artefact multiplies
+ * ALL channels equally (intensity change from motion or illumination), which is
+ * the component POS is designed to remove; raw green keeps it.
+ */
+export interface SynthRgbOptions {
+  durationMs: number;
+  fps: number;
+  bpm: number;
+  /** Relative pulse amplitude in green (0.005 = 0.5%). */
+  amplitude: number;
+  /** Second-harmonic amplitude as a fraction of the fundamental. Default 0.3. */
+  harmonic?: number;
+  /** Relative pulse amplitude per channel (R, G, B), scaled so G = 1. */
+  pulseDir?: readonly [number, number, number];
+  means?: readonly [number, number, number];
+  /** Gaussian noise sd per channel, in pixel-value units (0-255 scale). */
+  noiseSd?: number;
+  /** Linear illumination drift (relative per minute, all channels). */
+  driftPerMin?: number;
+  /** Shared multiplicative artefact: relative amplitude and frequency (Hz). */
+  artefact?: { amplitude: number; hz: number };
+  jitterMs?: number;
+  drops?: readonly (readonly [number, number])[];
+  seed?: number;
+}
+
+export interface SynthRgb {
+  tMs: number[];
+  r: number[];
+  g: number[];
+  b: number[];
+}
+
+export function synthRgb(o: SynthRgbOptions): SynthRgb {
+  const uniform = rng(o.seed ?? 1);
+  const gauss = normal(rng((o.seed ?? 1) + 1000));
+  const [mr, mg, mb] = o.means ?? [150, 110, 90];
+  const [dr, dg, db] = o.pulseDir ?? [0.45, 1, 0.65];
+  const h = o.harmonic ?? 0.3;
+  const f = o.bpm / 60;
+  const dt = 1000 / o.fps;
+  const out: SynthRgb = { tMs: [], r: [], g: [], b: [] };
+  let last = -Infinity;
+  for (let k = 0; k * dt < o.durationMs; k++) {
+    const jitter = o.jitterMs ? (uniform() * 2 - 1) * o.jitterMs : 0;
+    const t = Math.max(k * dt + jitter, last + 0.5);
+    last = t;
+    if (inAny(t, o.drops)) continue;
+    const s = t / 1000;
+    const p =
+      o.amplitude * (Math.sin(2 * Math.PI * f * s) + h * Math.sin(2 * Math.PI * 2 * f * s + 0.8));
+    const art =
+      ((o.driftPerMin ?? 0) * t) / 60_000 +
+      (o.artefact ? o.artefact.amplitude * Math.sin(2 * Math.PI * o.artefact.hz * s) : 0);
+    const n = o.noiseSd ?? 0;
+    out.tMs.push(t);
+    out.r.push(mr * (1 + dr * p + art) + n * gauss());
+    out.g.push(mg * (1 + dg * p + art) + n * gauss());
+    out.b.push(mb * (1 + db * p + art) + n * gauss());
+  }
+  return out;
+}

@@ -90,3 +90,43 @@ export const LOST_REASON_TEXT = {
   calibrating: 'calibrating',
   lowFps: 'low frame rate',
 } as const;
+
+/** Pulse card and region table (SPEC_AMENDMENT_02 Part 3: reason plus suggested fix). */
+export const PULSE_COPY = {
+  warmingUp: 'Warming up... hold still for about 10 seconds.',
+  notCalibrated: 'Measuring needs your face in view.',
+  noFace: 'Face not found. Centre your face in the frame.',
+  headTurned: 'Turn your head towards the screen.',
+  gap: 'Paused while your face was out of view or the video stopped. Measuring again...',
+  fpsTooLow:
+    'The camera is too slow for a pulse reading (under 15 frames per second). More light often helps.',
+  notEnoughSignal: 'Not enough signal. Hold still and face the light.',
+  singleRegion: 'Based on one skin region only.',
+  regionsDisagree: 'Regions disagree.',
+} as const;
+
+/** One sentence per quality flag, most important first (used for the main reason). */
+export const PULSE_FLAG_TEXT = {
+  motion: 'Too much movement. Hold still for a few seconds.',
+  dark: 'Too dark for a pulse reading. Try facing a window or lamp.',
+  saturated: 'Too bright on your skin. Avoid direct light or glare.',
+  lightingChange: 'The lighting changed. Keep the light steady.',
+  lowCoverage: 'Part of this region is not visible skin (hair, glasses, or shadow).',
+  lowFps: 'The camera is running slowly (under 20 frames per second). More light often helps.',
+  crossCheck: 'The two estimation methods disagree.',
+} as const;
+
+export const REGION_LABEL = {
+  forehead: 'Forehead',
+  leftCheek: 'Left cheek',
+  rightCheek: 'Right cheek',
+} as const;
+
+/** "Record numeric trace" (PROJECT_SPEC 5.5, 8: numbers only, after explicit action). */
+export const RECORD_COPY = {
+  info: 'Recording keeps numbers in memory until you stop: per frame, the time, the average red, green, and blue of each skin region, how much of each region was usable, and the nose position for the movement check; plus one pulse estimate per second with the clock time. No video, images, or face landmarks are recorded. When you stop, your browser saves two CSV files; the app keeps no copy. Recording stops after 30 minutes.',
+  start: 'Record numeric trace...',
+  confirm: 'Start recording',
+  stop: 'Stop and save',
+  active: 'Recording numeric trace.',
+} as const;

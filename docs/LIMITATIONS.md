@@ -37,3 +37,21 @@ _Skeleton created in Phase 0. This file is filled in as the relevant phases and 
   rests on about 42 s of data.
 - The timeline lives only in memory: it is cleared when the camera is started again and lost when
   the page closes, unless exported.
+
+## Pulse rate (Phase 4)
+
+- Accuracy on real people is unknown until validations V2a and V2b are run. All numbers so far
+  come from synthetic signals and a rendered synthetic face.
+- The forehead and cheek regions are derived from MediaPipe's canonical face model but not yet
+  checked on live video. Hair, glasses frames, beards, or makeup inside a region change its signal.
+- The quality levels and flag thresholds are starting values (the SQI levels from synthetic data
+  only).
+- Known confounds, not corrected: camera auto-exposure and auto-white-balance (locking is tried but
+  often unavailable), video compression, glasses glare, makeup, facial hair, head coverings, screen
+  light reflecting off the face, talking, and skin-tone-dependent signal strength.
+- Movement and lighting changes lower the quality or remove the value; a value can still be wrong
+  when quality reads Fair.
+- A 10 s window resolves about 6 BPM; finer values come from interpolation and depend on signal
+  quality. The shown value is a median of recent estimates and lags real changes by several
+  seconds.
+- Below 20 fps the quality is lowered; below 15 fps there is no estimate.

@@ -14,6 +14,8 @@ import {
 import { captureStatusText } from '../captureStatus.ts';
 import { Footer } from '../components/Footer.tsx';
 import { PlayIcon, StopIcon } from '../icons/Icons.tsx';
+import { REGION_IDS, regionPolygons } from '../../rppg/roi.ts';
+import { REGION_LABEL } from '../copy.ts';
 import { PRESETS, nearestLandmark, parseIndexList, type PresetId } from './explorerModel.ts';
 
 interface DrawOptions {
@@ -22,6 +24,8 @@ interface DrawOptions {
   showNumbers: boolean;
   mirrored: boolean;
   selected: number;
+  /** Draw the pulse region polygons. */
+  regions: boolean;
 }
 
 /** Per-frame state for the Explorer. Lives outside React state (CLAUDE.md). */
@@ -40,6 +44,7 @@ class ExplorerRuntime {
     showNumbers: false,
     mirrored: false,
     selected: -1,
+    regions: false,
   };
 
   setLandmarker(lm: Landmarker | null, loading: boolean): void {
@@ -153,6 +158,36 @@ function drawOverlay(canvas: HTMLCanvasElement, rt: ExplorerRuntime): void {
     }
   });
 
+  if (o.regions) {
+    const polys = regionPolygons(pts.map((p) => ({ x: xOf(p), y: p.y * h })));
+    ctx.setLineDash([5, 3]);
+    for (const id of REGION_IDS) {
+      const poly = polys[id];
+      if (!poly) continue;
+      ctx.beginPath();
+      poly.forEach((p, i) => {
+        if (i === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      });
+      ctx.closePath();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = shadow;
+      ctx.stroke();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = fg;
+      ctx.stroke();
+      const c = poly.reduce(
+        (a, p) => ({ x: a.x + p.x / poly.length, y: a.y + p.y / poly.length }),
+        {
+          x: 0,
+          y: 0,
+        },
+      );
+      label(REGION_LABEL[id], c.x - 20, c.y + 4);
+    }
+    ctx.setLineDash([]);
+  }
+
   const sel = pts[o.selected];
   if (sel) {
     const x = xOf(sel);
@@ -213,9 +248,16 @@ export function LandmarkExplorer() {
 
   // Push draw options to the runtime and redraw (also while frozen).
   useEffect(() => {
-    rt.setOptions({ highlight, pointLabels, showNumbers, mirrored, selected });
+    rt.setOptions({
+      highlight,
+      pointLabels,
+      showNumbers,
+      mirrored,
+      selected,
+      regions: preset === 'regions',
+    });
     if (canvasRef.current) drawOverlay(canvasRef.current, rt);
-  }, [rt, highlight, pointLabels, showNumbers, mirrored, selected]);
+  }, [rt, highlight, pointLabels, showNumbers, mirrored, selected, preset]);
 
   const { addFrameListener, getVideo } = capture;
   useEffect(
@@ -476,6 +518,11 @@ export function LandmarkExplorer() {
             <li>
               Turn your head to your left, then right; tilt your chin up, then down; tilt your head
               towards each shoulder. Note the sign of yaw, pitch, and roll each time.
+            </li>
+            <li>
+              Pulse regions: the forehead box sits on bare forehead skin above the eyebrows and
+              below the hairline; each cheek box sits on cheek skin, clear of the eye, nose, mouth,
+              beard, and glasses frames. Check with the head turned slightly too.
             </li>
             <li>Write what you saw in docs/METHODS.md (Landmark verification).</li>
           </ol>

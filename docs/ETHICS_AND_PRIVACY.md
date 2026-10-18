@@ -12,7 +12,7 @@ The production build injects a CSP `<meta>` tag (`csp.ts`, `vite.config.ts`). Cu
 | `script-src`  | `'self' 'wasm-unsafe-eval'` | No inline or third-party scripts. `'wasm-unsafe-eval'` lets MediaPipe compile its WebAssembly; without it Chrome blocked `WebAssembly.instantiate()` on the production build (tested 2026-10-17). JavaScript `eval` stays blocked. |
 | `style-src`   | `'self'`                    | Bundled CSS only.                                                                                                                                                                                                                  |
 | `img-src`     | `'self' blob:`              | `blob:` reserved for canvas snapshots in the UI (never stored or uploaded).                                                                                                                                                        |
-| `media-src`   | `'self' blob:`              | `blob:` lets the V1 validation tool (`#v1`) play a video file the user picks, from a local object URL. The file is read on the device only; it is never uploaded or stored by the app.                                             |
+| `media-src`   | `'self' blob:`              | `blob:` lets the validation tools (`#v1`, `#v2`) play a video file the user picks, from a local object URL. The file is read on the device only; it is never uploaded or stored by the app.                                        |
 | `font-src`    | `'self'`                    | Fonts must be self-hosted.                                                                                                                                                                                                         |
 | `connect-src` | `'self'`                    | No network requests to other hosts.                                                                                                                                                                                                |
 | `worker-src`  | `'self'`                    | Reserved for a possible same-origin Web Worker (Phase 6).                                                                                                                                                                          |
@@ -38,8 +38,15 @@ The production build injects a CSP `<meta>` tag (`csp.ts`, `vite.config.ts`). Cu
   host other than the app's own origin.
 - Face landmarks are computed per frame in memory and are never stored. The Landmark Explorer's
   "Freeze frame" keeps one frame in memory only while frozen.
-- The V1 tool reads a video file the user picks, from a local object URL; nothing is uploaded.
+- The V1 and V2a tools (`#v1`, `#v2`) read a video file the user picks, from a local object URL;
+  nothing is uploaded, and their exports hold numbers only.
   Its exports (after a button press) hold numbers only: event times, EAR values, flags.
+- Pulse: skin pixels of three small regions are read from each frame into a canvas, averaged,
+  and discarded within the same frame. Only the averages enter the pulse calculation.
+- "Record numeric trace" (Pulse tab) records only after the user confirms a description of the
+  contents: per-frame time, region colour averages and quality numbers, nose position and eye
+  distance in pixels, and one estimate per second with clock time. No video, images, or landmark
+  sets. Kept in memory (30 min cap) and saved by the browser as CSV when the user stops.
 - The session timeline is kept in memory only and cleared on the next Start. Its CSV export
   needs two clicks; the confirmation lists what the file contains (per-minute numbers only).
 

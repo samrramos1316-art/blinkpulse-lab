@@ -244,3 +244,53 @@ Started at the author's request ("commit and move on") with Phase 3's V1 still o
 - The in-progress minute is shown as not yet usable (hatched) with "so far (in progress)" in the
   table.
 - The signals area now has tabs (Blinks / Pulse / Session timeline) per SPEC_AMENDMENT_02.
+
+## Phase 4: Pulse rate (2026-10-17)
+
+**Status: built, not accepted.** Acceptance needs offline evaluation on recorded data (V2a) and
+live V2b against a reference device (PROJECT_SPEC Phase 4). Both need the author. The pulse regions
+also still need the live Explorer check.
+
+**Verified**
+
+- `npm run check` passes: 40 test files, 427 tests.
+- Synthetic tests per PROJECT_SPEC 6.2 and Patch A; results with n in `docs/METHODS.md`.
+- `npm run eval` replays a recorded trace through the same TypeScript pipeline (MAE 0.12 BPM,
+  n = 30, on a synthetic-face recording).
+- Production build in headless Chrome with a rendered synthetic face as the fake camera: 72 and
+  108 BPM recovered with Good quality in all regions; overlay labels, quality chip, region table,
+  waveform, spectrum, and filter plots; numeric recording with confirmation and save; no CSP
+  violations, no errors.
+- Performance: 1.20 ms median, 2.91 ms p95 per frame outside face tracking (goal: 4 ms median), so
+  the Web Worker from Patch A is not needed now.
+
+**Not verified**
+
+- Any real face or real skin; exposure/white-balance locking on a real webcam.
+- Live position of the forehead and cheek regions (Explorer preset added).
+- The 2.5x gap factor from Phase 2 on real webcams (the synthetic-face runs showed a few gaps at
+  start-up, while Chrome's fake camera stutters).
+- A screen reader on the new plots and table.
+
+**Deviations and decisions**
+
+- SQI levels (Good >= 0.7, Fair >= 0.5) chosen from synthetic data; the other thresholds (motion,
+  lighting, saturation, darkness) and the 6 BPM "consistent" rule are unvalidated starting values.
+  The spec gives no numbers for them.
+- The SQI counts second-harmonic power only inside 0.7-3.0 Hz, so it cannot exceed 1.
+- The pulse uses the same face and head-pose gating as blinks (calibration-relative pose).
+- Exposure/white-balance locking (deferred from Phase 2) is tried 3 s after start.
+- "Record numeric trace" was built now (spec: Phase 5 settings) because V2b needs it. It uses an
+  inline confirmation listing exactly what is recorded, keeps numbers only, and stops at 30 min. If
+  the camera stops while recording, the trace is kept for the user to save or discard.
+- `tools/eval_cli.ts` was built now (spec: Phase 5) because Phase 4 acceptance needs it.
+- V2a extraction is the in-browser `#v2` page rather than a separate Python tool: it runs the
+  app's own face tracking, regions, and pixel reading on a local video file, so offline and live
+  traces come from identical code (a Python MediaPipe port would need its own landmark and ROI
+  verification). `npm run ppg:ref` converts a ground-truth PPG to reference BPM. Reading each
+  dataset's ground-truth file into `t_ms,ppg` is left to the user. Verified end to end on a
+  synthetic face video (MAE 0.01 BPM, n = 28; `docs/METHODS.md`).
+- The quality chip has a symbol per level (filled, half, empty circle) and the text "Quality: ...",
+  never colour alone. No chip while the signal is interrupted.
+- The region table shows each region's latest 10 s estimate; the card shows the smoothed value, so
+  they can differ by about 1 BPM.

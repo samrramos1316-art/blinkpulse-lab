@@ -4,9 +4,10 @@
  */
 
 import type { Point } from '../../blink/ear.ts';
+import { FOREHEAD, LEFT_CHEEK, RIGHT_CHEEK } from '../../rppg/roi.ts';
 import { EYE_A, EYE_B, LANDMARK_COUNT } from '../../vision/landmarks.ts';
 
-export type PresetId = 'all' | 'eyeA' | 'eyeB' | 'eyes' | 'custom';
+export type PresetId = 'all' | 'eyeA' | 'eyeB' | 'eyes' | 'regions' | 'custom';
 
 export interface Preset {
   id: PresetId;
@@ -24,6 +25,11 @@ export const PRESETS: readonly Preset[] = [
   { id: 'eyeA', label: 'Eye A (EAR P1-P6)', indices: EYE_A, pointLabels: P_LABELS },
   { id: 'eyeB', label: 'Eye B (EAR P1-P6)', indices: EYE_B, pointLabels: P_LABELS },
   { id: 'eyes', label: 'Both EAR eyes', indices: [...EYE_A, ...EYE_B] },
+  {
+    id: 'regions',
+    label: 'Pulse regions (forehead, cheeks)',
+    indices: [...FOREHEAD.brows, ...FOREHEAD.midline, ...RIGHT_CHEEK, ...LEFT_CHEEK],
+  },
   { id: 'custom', label: 'Custom list or range', indices: [] },
 ];
 

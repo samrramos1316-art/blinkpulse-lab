@@ -1,6 +1,13 @@
 import type { BlinkSnapshot } from '../../app/blinkPipeline.ts';
 import type { CaptureSnapshot } from '../../app/captureController.ts';
+import type { CameraLockResult, LockState } from '../../capture/cameraLock.ts';
 import type { TimestampSource } from '../../capture/timestampSource.ts';
+
+const LOCK_TEXT: Record<LockState, string> = {
+  locked: 'locked',
+  unsupported: 'automatic (camera has no control)',
+  failed: 'automatic (lock failed)',
+};
 
 const SOURCE_LABEL: Record<TimestampSource, string> = {
   captureTime: 'capture time',
@@ -17,6 +24,9 @@ export interface TrackingInfo {
   blink: BlinkSnapshot;
   inferenceMs: number | null;
   delegate: string | null;
+  /** Per-frame processing excluding face tracking (ms). */
+  processingMs?: { median: number; p95: number } | null;
+  cameraLock?: CameraLockResult | null;
 }
 
 export function TimingPanel({
@@ -70,6 +80,16 @@ export function TimingPanel({
           : '-',
       ],
       ['EAR (A / B)', `${fmt(blink.eyeA, 3)} / ${fmt(blink.eyeB, 3)}`],
+      [
+        'Processing (excl. face tracking)',
+        `${fmt(tracking.processingMs?.median, 2)} median, ${fmt(tracking.processingMs?.p95, 2)} p95 ms/frame`,
+      ],
+      [
+        'Exposure / white balance',
+        tracking.cameraLock
+          ? `${LOCK_TEXT[tracking.cameraLock.exposure]} / ${LOCK_TEXT[tracking.cameraLock.whiteBalance]}`
+          : 'automatic (locks after 3 s)',
+      ],
     );
   }
 
