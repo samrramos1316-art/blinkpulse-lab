@@ -294,3 +294,36 @@ also still need the live Explorer check.
   never colour alone. No chip while the signal is interrupted.
 - The region table shows each region's latest 10 s estimate; the card shows the smoothed value, so
   they can differ by about 1 BPM.
+
+## Phase 4B step 1: Study protocol draft (2026-10-17)
+
+**Status: draft committed (not frozen). The author postponed the study on 2026-10-18.**
+Started while Phase 4 acceptance (V2a, V2b, live check of the pulse regions) and V1 are still open,
+because the author asked for the next step. SPEC_AMENDMENT_01 gate G-A says 4B should wait for
+Phase 4 acceptance. The draft is documentation only, and no participant data can be collected until
+it is frozen.
+
+**Written**
+
+- `docs/STUDY_PROTOCOL.md`: hypotheses, null-result rule, factor definitions on top of the
+  existing blink pipeline, ECI formula with floors and cap, gating, band rule, sessions, exclusions,
+  analysis plan with controls, export contents, ethics, recruitment, open decisions D1-D8.
+- `docs/forms/`: adult consent, parent/guardian permission, and minor assent drafts with
+  placeholders.
+
+**Checked against sources**
+
+- PVT-B details (3 min, 1-4 s interval including 1 s feedback, lapse >= 355 ms, false start
+  < 100 ms) against Basner, Mollicone & Dinges (2011, _Acta Astronautica_), read on PubMed Central.
+- KSS: a published reproduction (Shahid et al. 2012, ch. 47) shows the scale is copyright
+  Torbjörn Åkerstedt and forbids reproduction or adaptation without written consent. Its step-8
+  wording differs slightly from PROJECT_SPEC 5.8. The protocol does not reproduce the anchors.
+
+**Not checked**
+
+- The original Åkerstedt & Gillberg (1990), Basner & Dinges (2011, _Sleep_), and Dinges & Grace
+  (1998) papers.
+- Whether the school or a science fair requires review-board approval (for the author to ask).
+
+**Proposed spec fixes** (in protocol Section 13): lapse ">= 355 ms" rather than "> 355 ms"; the
+1-4 s interval includes the feedback; cite Basner, Mollicone & Dinges (2011) in Appendix A.
