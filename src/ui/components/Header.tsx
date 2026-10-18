@@ -1,5 +1,5 @@
 import type { CaptureStatus } from '../../app/captureController.ts';
-import { APP_NAME, PRIVACY_BADGE } from '../strings.ts';
+import { APP_NAME, PRIVACY_BADGE, PRIVACY_BADGE_SHORT } from '../strings.ts';
 import { EyeIcon, HelpIcon, LockIcon, LogoMark, PlayIcon, StopIcon } from '../icons/Icons.tsx';
 import { ThemeToggle } from './ThemeToggle.tsx';
 
@@ -27,14 +27,17 @@ export function Header({ status, onStart, onStop, onOpenGuide, calibrate }: Head
 
         <p className="privacy-badge">
           <LockIcon size={16} />
-          <span>{PRIVACY_BADGE}</span>
+          <span className="privacy-badge__full">{PRIVACY_BADGE}</span>
+          <span className="privacy-badge__short" aria-hidden="true">
+            {PRIVACY_BADGE_SHORT}
+          </span>
         </p>
 
         <div className="app-header__actions">
           <ThemeToggle />
           <button type="button" className="btn btn-ghost" onClick={onOpenGuide}>
             <HelpIcon size={18} />
-            <span>Guide</span>
+            <span className="btn-label-wide">Guide</span>
           </button>
           {status === 'running' ? (
             <button

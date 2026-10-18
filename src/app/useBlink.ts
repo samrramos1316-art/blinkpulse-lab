@@ -96,6 +96,9 @@ export interface Blink {
   clearPendingTrace: () => void;
   calibrate: () => void;
   cancelCalibration: () => void;
+  /** Eye-closure indicator: record / abandon the alert baseline. */
+  startBaseline: () => void;
+  cancelBaseline: () => void;
 }
 
 const TIMING_WINDOW = 120;
@@ -217,7 +220,7 @@ export function useBlink(capture: Capture): Blink {
             ? {
                 points,
                 pose: frame.matrix ? headPoseFromMatrix(frame.matrix) : null,
-                frameWidth: w,
+                frameSize: Math.max(w, h),
               }
             : null,
         );
@@ -326,6 +329,14 @@ export function useBlink(capture: Capture): Blink {
     },
     cancelCalibration: () => {
       pipeline.cancelCalibration();
+      setSnapshot(pipeline.snapshot());
+    },
+    startBaseline: () => {
+      pipeline.startBaseline();
+      setSnapshot(pipeline.snapshot());
+    },
+    cancelBaseline: () => {
+      pipeline.cancelBaseline();
       setSnapshot(pipeline.snapshot());
     },
   };

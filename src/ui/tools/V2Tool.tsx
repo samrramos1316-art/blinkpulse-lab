@@ -91,7 +91,7 @@ class V2Runtime {
             ? {
                 points,
                 pose: face.matrix ? headPoseFromMatrix(face.matrix) : null,
-                frameWidth: meta.width,
+                frameSize: Math.max(meta.width, meta.height),
               }
             : null,
         );

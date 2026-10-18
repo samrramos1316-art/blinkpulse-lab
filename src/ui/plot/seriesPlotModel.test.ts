@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildSeriesPlot, describeSeries, niceCeil } from './seriesPlotModel.ts';
+import { buildSeriesPlot, describeSeries, indexAtX, niceCeil } from './seriesPlotModel.ts';
 
 const rect = { x: 0, y: 0, w: 100, h: 50 };
 
@@ -77,5 +77,44 @@ describe('buildSeriesPlot with usable flags', () => {
   it('count axes use an even whole-number maximum', () => {
     expect(buildSeriesPlot([0, 1], rect, undefined, undefined, true).yMax).toBe(2);
     expect(buildSeriesPlot([3], rect, undefined, undefined, true).yMax).toBe(4);
+  });
+});
+
+describe('reference lines and pointer readout', () => {
+  it('keeps reference lines in view and places them on the value axis', () => {
+    const m = buildSeriesPlot([1, 1.2], rect, undefined, undefined, false, undefined, [
+      { value: 1, label: 'baseline' },
+      { value: 2.5, label: 'well above' },
+    ]);
+    expect(m.yMax).toBe(5); // 2.5 x 1.1 headroom -> 5
+    expect(m.refs).toEqual([
+      { y: 40, label: 'baseline' },
+      { y: 25, label: 'well above' },
+    ]);
+  });
+
+  it('drops reference lines outside a fixed axis', () => {
+    const m = buildSeriesPlot([1], rect, 2, undefined, false, undefined, [
+      { value: 3, label: 'x' },
+    ]);
+    expect(m.refs).toEqual([]);
+  });
+
+  it('custom x labels skip null entries', () => {
+    const m = buildSeriesPlot([1, 2, 3, 4], rect, undefined, undefined, false, [
+      '0',
+      null,
+      '1',
+      null,
+    ]);
+    expect(m.xTicks.map((t) => t.label)).toEqual(['0', '1']);
+  });
+
+  it('finds the point under the pointer', () => {
+    expect(indexAtX(10, 4, rect)).toBe(0);
+    expect(indexAtX(60, 4, rect)).toBe(2);
+    expect(indexAtX(100, 4, rect)).toBe(3);
+    expect(indexAtX(-1, 4, rect)).toBeNull();
+    expect(indexAtX(50, 0, rect)).toBeNull();
   });
 });

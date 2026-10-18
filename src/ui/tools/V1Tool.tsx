@@ -103,7 +103,7 @@ class V1Runtime {
             ? {
                 points: toPixels(frame.landmarks, w, h),
                 pose: frame.matrix ? headPoseFromMatrix(frame.matrix) : null,
-                frameWidth: w,
+                frameSize: Math.max(w, h),
               }
             : null,
         );

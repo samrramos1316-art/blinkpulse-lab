@@ -16,6 +16,13 @@ export interface SeriesPlotModel {
   yTicks: { value: number; y: number }[];
   xTicks: { label: string; x: number }[];
   yMax: number;
+  /** Horizontal reference lines (e.g. baseline = 1), inside the axis range. */
+  refs: { y: number; label: string }[];
+}
+
+export interface RefLine {
+  value: number;
+  label: string;
 }
 
 /** Smallest of 1, 2, 2.5, 5 x 10^k that is >= v (v > 0). */
@@ -38,10 +45,14 @@ export function buildSeriesPlot(
   usable?: readonly boolean[],
   /** Counts: the axis maximum is an even integer >= 2, so the mid tick is a whole number. */
   integer = false,
+  /** Custom x labels (null = no tick there); default: 1-based minute numbers. */
+  xLabels?: readonly (string | null)[],
+  refLines: readonly RefLine[] = [],
 ): SeriesPlotModel {
   const n = Math.max(values.length, 1);
   const finite = values.filter((v): v is number => v !== null && Number.isFinite(v));
-  const dataMax = Math.max(0, ...finite);
+  // Reference lines stay in view (with headroom so their labels fit).
+  const dataMax = Math.max(0, ...finite, ...refLines.map((r) => r.value * 1.1));
   const yMax = fixedMax ?? (integer ? Math.max(2, 2 * Math.ceil(dataMax / 2)) : niceCeil(dataMax));
   const colW = rect.w / n;
   const xOf = (i: number) => rect.x + (i + 0.5) * colW;
@@ -67,11 +78,30 @@ export function buildSeriesPlot(
   if (current.length) segments.push(current);
 
   const yTicks = [0, 0.25, 0.5, 0.75, 1].map((f) => ({ value: f * yMax, y: yOf(f * yMax) }));
-  const step = Math.max(1, Math.ceil(values.length / 8));
+  const labelled = xLabels
+    ? values.flatMap((_, i) => {
+        const label = xLabels[i];
+        return label == null ? [] : [{ i, label }];
+      })
+    : values.map((_, i) => ({ i, label: String(i + 1) }));
+  const step = Math.max(1, Math.ceil(labelled.length / 8));
   const xTicks: SeriesPlotModel['xTicks'] = [];
-  for (let i = 0; i < values.length; i += step) xTicks.push({ label: String(i + 1), x: xOf(i) });
+  for (let k = 0; k < labelled.length; k += step) {
+    const t = labelled[k] as { i: number; label: string };
+    xTicks.push({ label: t.label, x: xOf(t.i) });
+  }
 
-  return { segments, markers, gaps, yTicks, xTicks, yMax };
+  const refs = refLines
+    .filter((r) => r.value >= 0 && r.value <= yMax)
+    .map((r) => ({ y: yOf(r.value), label: r.label }));
+
+  return { segments, markers, gaps, yTicks, xTicks, yMax, refs };
+}
+
+/** Index of the point under x (pointer readout), or null outside the plot. */
+export function indexAtX(x: number, n: number, rect: PlotRect): number | null {
+  if (n === 0 || x < rect.x || x > rect.x + rect.w) return null;
+  return Math.min(n - 1, Math.max(0, Math.floor(((x - rect.x) / rect.w) * n)));
 }
 
 /**

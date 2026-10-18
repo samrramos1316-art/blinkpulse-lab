@@ -12,6 +12,7 @@ import { calibrate, type BlinkThresholds, type CalibrationResult } from '../blin
 import { earBothEyes, type EyeIndices, type Point } from '../blink/ear.ts';
 import { BlinkMetrics, type BlinkMetricsSnapshot } from '../blink/metrics.ts';
 import { SessionSummary, type MinuteBin } from '../blink/sessionSummary.ts';
+import { EyeClosureTracker, type BaselineState, type TrendPoint } from '../blink/sleepiness.ts';
 import type { FrameTick } from '../capture/frameClock.ts';
 import { median } from '../dsp/stats.ts';
 import { poseWithinLimits, relativePose, type HeadPose } from '../vision/headPose.ts';
@@ -35,8 +36,11 @@ export interface FaceInput {
   points: Point[];
   /** Head pose, or null if it could not be derived. */
   pose: HeadPose | null;
-  /** Frame width in pixels, for the setup distance hint. */
-  frameWidth?: number;
+  /**
+   * Longer side of the frame in pixels, for the setup distance hint. The longer side
+   * (not the width) keeps the hint the same for portrait video from phones.
+   */
+  frameSize?: number;
 }
 
 export interface BlinkSnapshot {
@@ -52,12 +56,22 @@ export interface BlinkSnapshot {
   frameMs: number | null;
   /** Fraction of recent frames where a face was found (0..1). */
   faceFoundFraction: number | null;
-  /** Outer-eye-corner distance / frame width (face size in frame), or null. */
+  /** Outer-eye-corner distance / longer frame side (face size in frame), or null. */
   eyeSpanFraction: number | null;
   /** Head pose during calibration (gating reference), or null. */
   referencePose: HeadPose | null;
   /** Per-minute session bins (SPEC_AMENDMENT_01 Patch B); empty before the first calibration. */
   session: MinuteBin[];
+  /** Eye-closure indicator (PROJECT_SPEC 5.7, Patch C). */
+  indicator: IndicatorSnapshot;
+}
+
+export interface IndicatorSnapshot {
+  baseline: BaselineState;
+  /** Latest 60 s and 5 min results (10 s steps once the baseline is done). */
+  latest: TrendPoint;
+  /** One point per 10 s since the baseline finished (this camera session). */
+  trend: TrendPoint[];
 }
 
 export interface EarHistory {
@@ -94,6 +108,8 @@ export class BlinkPipeline {
   private readonly metrics = new BlinkMetrics();
   /** Session timeline: starts with the first sample after the first calibration. */
   private readonly session = new SessionSummary();
+  /** Eye-closure indicator: fed after calibration, like the session timeline. */
+  private readonly eyeClosure = new EyeClosureTracker();
   private thresholds: BlinkThresholds | null = null;
   private calibration: CalibrationState = { phase: 'none' };
   private calibrationSamples: number[] = [];
@@ -136,11 +152,11 @@ export class BlinkPipeline {
     }
     const valid = status === 'ok' && Number.isFinite(ear);
     let eyeSpan = NaN;
-    if (face?.frameWidth) {
+    if (face?.frameSize) {
       const outerA = face.points[this.eyeA[0]];
       const outerB = face.points[this.eyeB[3]];
       if (outerA && outerB) {
-        eyeSpan = Math.hypot(outerA.x - outerB.x, outerA.y - outerB.y) / face.frameWidth;
+        eyeSpan = Math.hypot(outerA.x - outerB.x, outerA.y - outerB.y) / face.frameSize;
       }
     }
     this.last = { status, ear, eyeA, eyeB, pose: face?.pose ?? null, eyeSpan };
@@ -170,12 +186,22 @@ export class BlinkPipeline {
       this.stepCalibration(sample);
       return null;
     }
+    if (this.thresholds !== null) {
+      this.eyeClosure.addSample({
+        tMs: tick.tMs,
+        ear,
+        valid,
+        reason: status === 'headTurned' ? 'headTurned' : 'noFace',
+        gapBefore: tick.gap,
+      });
+    }
 
     this.metrics.addSample(sample);
     const event = this.detector?.push(sample) ?? null;
     if (event) {
       this.metrics.addEvent(event);
       this.session.addEvent(event);
+      this.eyeClosure.addEvent(event);
       this.events.push(event);
       const lo = tick.tMs - HISTORY_MS;
       if ((this.events[0]?.endMs ?? Infinity) < lo)
@@ -198,11 +224,21 @@ export class BlinkPipeline {
     this.calibrationPoses = [];
   }
 
-  /** New camera session: keep the calibration, forget events, history, and metrics. */
+  /** Start collecting the alert baseline (needs a blink calibration). */
+  startBaseline(): void {
+    if (this.thresholds !== null) this.eyeClosure.startBaseline();
+  }
+
+  cancelBaseline(): void {
+    this.eyeClosure.cancelBaseline();
+  }
+
+  /** New camera session: keep the calibration and a finished baseline, forget the rest. */
   resetSession(): void {
     this.cancelCalibration();
     this.metrics.reset();
     this.session.reset();
+    this.eyeClosure.reset();
     this.detector?.reset();
     this.events = [];
     this.histCount = 0;
@@ -259,6 +295,11 @@ export class BlinkPipeline {
       eyeSpanFraction: finite(this.last.eyeSpan),
       referencePose: this.referencePose,
       session: this.session.bins(),
+      indicator: {
+        baseline: this.eyeClosure.baseline,
+        latest: this.eyeClosure.latest(),
+        trend: this.eyeClosure.trend.slice(),
+      },
     };
   }
 
@@ -330,6 +371,7 @@ export class BlinkPipeline {
         }
       : null;
     this.detector = new BlinkDetector(this.thresholds);
+    this.eyeClosure.setEarBaseline(result.baseline);
     this.metrics.reset();
     this.events = [];
   }

@@ -130,3 +130,43 @@ export const RECORD_COPY = {
   stop: 'Stop and save',
   active: 'Recording numeric trace.',
 } as const;
+
+/**
+ * Eye-closure indicator panel (PROJECT_SPEC 5.7, Patch C2). The approved indicator
+ * labels themselves live in strings.ts; nothing here may name a state of the user.
+ */
+export const INDICATOR_COPY = {
+  notCalibrated: 'Press Calibrate first. The indicator compares against your calibrated eyes.',
+  noBaseline: 'Record your alert baseline in the Eye closure tab to start.',
+  baselineRunning: (pct: number) => `Recording your alert baseline: ${pct.toFixed(0)}% done.`,
+  baselineIntro:
+    'The indicator compares your eyelid behaviour now with an alert baseline: 3 minutes of usable time recorded while you feel rested and are doing your usual work at the screen.',
+  baselineConfirm:
+    'Start this only while you feel rested. Keep working as usual with your face in view. It needs 3 minutes of usable time and stops after 6 minutes if it cannot get them. The baseline is kept in memory only, until you recalibrate or close the page.',
+  baselineStart: 'Record alert baseline...',
+  baselineAgain: 'Record again...',
+  baselineFailed: {
+    notEnoughValid:
+      'The baseline did not get 3 minutes of usable time within 6 minutes. Keep your face in view and facing the screen, then try again.',
+    tooFewBlinks:
+      'Too few blinks were measured during the baseline (fewer than 10). Try again while working as usual.',
+  },
+  provisional:
+    'The band cut-offs (1.5 and 2.5 times your baseline) are provisional and have not been validated.',
+  windowLegend: 'Window',
+  axis: 'Horizontal axis: minutes since the indicator started (one point every 10 seconds).',
+  blinkRateNote:
+    'Blink rate is shown for comparison only and is not part of the indicator: concentrating lowers it, so it can move either way.',
+} as const;
+
+/** Why a window has no indicator value (after "Not enough data: "). */
+export const INDICATOR_REASON_TEXT = {
+  noCalibration: 'press Calibrate first.',
+  noBaseline: 'record your alert baseline first.',
+  warmingUp: 'still collecting this window.',
+  noFace: 'face not found for too much of this window.',
+  headTurned: 'head turned away for too much of this window.',
+  gap: 'video paused or frames missing.',
+  lowFps: 'the camera is below 24 frames per second. More light often helps.',
+  tooFewBlinks: 'too few blinks in this window to measure their duration.',
+} as const;

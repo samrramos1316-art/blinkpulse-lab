@@ -175,4 +175,44 @@ describe('BlinkPipeline', () => {
     q.resetSession();
     expect(q.snapshot().session).toEqual([]);
   });
+
+  it('runs the eye-closure indicator end to end: baseline, then 10 s trend points', () => {
+    const { p, next } = calibrated();
+    expect(p.snapshot().indicator.latest.long).toMatchObject({ ok: false, reason: 'noBaseline' });
+    p.startBaseline();
+    // 3 min of baseline plus 5 min of the same behaviour (one 200 ms blink every 3 s).
+    const end = next + 30 * 60 * 8 + 60;
+    for (let i = next; i < end; i++) p.process(tick(i), face(earAt(i)));
+    const ind = p.snapshot().indicator;
+    expect(ind.baseline.phase).toBe('done');
+    expect(ind.trend.length).toBeGreaterThan(25);
+    const last = ind.latest.long;
+    expect(last.ok).toBe(true);
+    if (last.ok) {
+      expect(last.eci).toBeCloseTo(1, 1);
+      expect(last.band).toBe('near');
+    }
+  });
+
+  it('recalibrating clears the eye-closure baseline', () => {
+    const { p, next } = calibrated();
+    p.startBaseline();
+    for (let i = next; i < next + 30 * 200; i++) p.process(tick(i), face(earAt(i)));
+    expect(p.snapshot().indicator.baseline.phase).toBe('done');
+    p.startCalibration();
+    const from = next + 30 * 200;
+    for (let i = from; i <= from + (CALIBRATION_MS * 30) / 1000; i++)
+      p.process(tick(i), face(earAt(i)));
+    expect(p.snapshot().indicator.baseline.phase).toBe('none');
+  });
+
+  it('face size uses the longer frame side, so portrait and landscape video agree', () => {
+    const landscape = new BlinkPipeline(EYE_A, EYE_B);
+    landscape.process(tick(0), { ...face(0.3), frameSize: Math.max(640, 480) });
+    const portrait = new BlinkPipeline(EYE_A, EYE_B);
+    portrait.process(tick(0), { ...face(0.3), frameSize: Math.max(480, 640) });
+    const a = landscape.snapshot().eyeSpanFraction;
+    expect(a).not.toBeNull();
+    expect(portrait.snapshot().eyeSpanFraction).toBe(a);
+  });
 });

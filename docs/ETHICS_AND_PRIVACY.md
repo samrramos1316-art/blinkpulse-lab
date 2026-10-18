@@ -66,6 +66,11 @@ seen in it, but the payload was not fully decoded. There is no public option to 
   (the author's own sessions that day) may have sent these usage pings to Google.
 - The dev server now sends a CSP header too (`DEV_CSP_DIRECTIVES` in `csp.ts`), with the same
   `connect-src 'self'`.
+- `npm run dev:phone` serves the same dev build, with the same CSP header, over https on the
+  local network so a phone can open it. The computer only serves the page files; video is still
+  processed on the phone and never sent to the computer. Anyone on the same network who knows the
+  address can open the page while it runs, so stop it when done and use it on trusted networks
+  only. The certificate's private key stays in the git-ignored `.cert/` folder.
 
 ## CSP notes
 

@@ -1,4 +1,5 @@
 /// <reference types="vitest/config" />
+import { existsSync, readFileSync } from 'node:fs';
 import react from '@vitejs/plugin-react';
 import { defineConfig, type Plugin } from 'vite';
 import { CSP_DIRECTIVES, DEV_CSP_DIRECTIVES, buildCsp } from './csp.ts';
@@ -24,11 +25,33 @@ function cspMetaTag(): Plugin {
   };
 }
 
+/**
+ * `npm run dev:phone` (mode "phone"): listen on the LAN over https with the
+ * self-signed certificate from tools/make-dev-cert.mjs, so a phone on the same
+ * Wi-Fi can use its camera (camera access needs a secure context).
+ */
+function phoneHttps(mode: string) {
+  if (mode !== 'phone') return {};
+  const key = '.cert/dev-key.pem';
+  const cert = '.cert/dev-cert.pem';
+  if (!existsSync(key) || !existsSync(cert)) {
+    throw new Error('Missing .cert/: run `node tools/make-dev-cert.mjs` (dev:phone does this).');
+  }
+  // Fixed port: the address printed by make-dev-cert.mjs must match.
+  return {
+    host: true,
+    port: 5173,
+    strictPort: true,
+    https: { key: readFileSync(key), cert: readFileSync(cert) },
+  };
+}
+
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react(), cspMetaTag()],
   server: {
     headers: { 'Content-Security-Policy': buildCsp(DEV_CSP_DIRECTIVES) },
+    ...phoneHttps(mode),
   },
   build: {
     // Inline assets would become data: URLs, which the CSP does not allow.
@@ -37,4 +60,4 @@ export default defineConfig({
   test: {
     environment: 'node',
   },
-});
+}));

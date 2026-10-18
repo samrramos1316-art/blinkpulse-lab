@@ -20,6 +20,8 @@ export const DISCLAIMER =
   'or images are uploaded or stored.';
 
 export const PRIVACY_BADGE = 'Processing on this device. Nothing is uploaded.';
+/** Narrow screens (phones); the full sentence stays available to screen readers. */
+export const PRIVACY_BADGE_SHORT = 'On-device only';
 
 /** Appendix B general strings. */
 export const METRIC = {

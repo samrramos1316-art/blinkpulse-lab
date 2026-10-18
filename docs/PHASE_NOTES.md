@@ -327,3 +327,59 @@ it is frozen.
 
 **Proposed spec fixes** (in protocol Section 13): lapse ">= 355 ms" rather than "> 355 ms"; the
 1-4 s interval includes the feedback; cite Basner, Mollicone & Dinges (2011) in Appendix A.
+
+## Phase 4B (partial): Eye-closure indicator for normal use (2026-10-18)
+
+**Status: built, not accepted, not committed.** The author asked to refine the program before any
+study, starting with the indicator. Study mode (KSS prompt, PVT-B, session runner, export, blinding)
+is not built.
+
+**Verified**
+
+- `npm run check` passes: 43 test files, 463 tests.
+- Synthetic tests for the factors, baseline, index, gating, trend, and summary (`docs/METHODS.md`).
+- Browser check of the card and baseline flow on the production build (`docs/METHODS.md`).
+
+**Not verified**
+
+- Any real face. Whether the index tracks anything is what V3 would test.
+- The trend plots, gauge, and summary with live values in a browser (synthetic face cannot blink).
+- A screen reader on the new tab.
+
+**Deviations and decisions**
+
+- The protocol formula was changed before any data: the floor now applies to both the window and
+  the baseline value. With the floor on the baseline only, behaviour identical to a baseline with no
+  long closures gave ECI 0.67 instead of 1.
+- The alert-baseline confirmation asks the user to start "only while you feel rested", because
+  Appendix B allows "alert" only in "alert baseline".
+- The card shows the 5-minute window; the tab lets the user switch the plots between 60 s and 5 min.
+- Provisional bands (1.5, 2.5) are shown and labelled as unvalidated (protocol decision D6).
+- Phase 4 acceptance (V2a, V2b, live pulse-region check) and V1 are still open (gate G-A).
+- Layout rework (author's request, 2026-10-18): the Eye closure tab is split into sections
+  (baseline stats, "Now" with factor ratio bars, a large trend plot with dashed baseline and band
+  lines, three factor plots, blink rate apart, a band-minutes bar); the session timeline gained
+  summary tiles and a 2 x 2 plot grid; all series plots gained a latest-value header and a pointer
+  readout. Checked by screenshots of a temporary synthetic-session page (removed) in light, dark,
+  and 360 px width; the readout is pointer-only, and the same numbers are in the tables.
+
+## Phone support (2026-10-18, author's request)
+
+**Status: built, not committed. Not tried on a real phone.**
+
+- `npm run dev:phone`: https dev server on the LAN with a self-signed certificate made by
+  `tools/make-dev-cert.mjs` (openssl; key in git-ignored `.cert/`, remade when the LAN address
+  changes; fixed port 5173). Nothing is published.
+- Screen Wake Lock while the camera runs (`src/app/useWakeLock.ts`), re-requested when the page
+  becomes visible again; refusals and unsupported browsers are ignored.
+- The preview frame follows the video's shape (portrait phone video), capped at 65% of the screen
+  height. The face-distance hint now divides by the longer frame side instead of the width (same
+  value for landscape webcams; tested that portrait and landscape agree).
+- Phone layout: compact header (short privacy badge "On-device only", the full sentence kept for
+  screen readers; icon-only Guide button), metric cards two per row, tabs scroll sideways instead
+  of wrapping, region labels placed so the cheek labels cannot overlap (tested), plots read values
+  on a sideways touch drag.
+- Checked: `npm run check` (44 files, 467 tests); headless Chrome emulating a 390 px touch phone,
+  over https on the LAN address, with a portrait synthetic face as the camera: secure context,
+  face tracking at 30 fps, pulse 72 BPM with Good quality, no horizontal scrolling, no errors.
+- Not checked: a real phone (camera, speed, wake lock, certificate prompt), iOS Safari.

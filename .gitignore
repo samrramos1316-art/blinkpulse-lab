@@ -13,3 +13,6 @@ recordings/
 # Copied from node_modules by tools/copy-mediapipe-assets.mjs
 public/wasm/*
 !public/wasm/.gitkeep
+
+# Self-signed dev certificate and private key (tools/make-dev-cert.mjs)
+.cert/

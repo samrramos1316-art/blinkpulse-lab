@@ -424,3 +424,49 @@ what V2 measures.
   rendered pulse waveform via `npm run ppg:ref`: MAE 0.01 BPM, Bland-Altman bias 0.00 BPM, 95%
   limits -0.02 to 0.02 BPM (fused, n = 28 paired); each single region MAE <= 0.02 BPM. This tests
   the tooling and time alignment only, not accuracy on real skin.
+
+## Eye-closure indicator (`src/blink/sleepiness.ts`, Phase 4B, normal use)
+
+Implements the draft `docs/STUDY_PROTOCOL.md` Sections 3-7. The protocol is **not frozen**: these
+constants can still change before a study, and nothing here has been tested on people.
+
+- **Input:** the same per-frame EAR, validity, and gap flags as the blink cards, from calibration
+  on; and the detector's blink events. Each frame interval is classified once (open, closed
+  (EAR <= 0.20 b), face lost, head turned, gap). A window sums the intervals that end inside it; a
+  ~33 ms interval is not split at the window edge.
+- **Factors:** closed fraction; closures of 500 ms or more per valid minute; mean duration of
+  blinks under 500 ms. Blink rate (blinks + long closures per valid minute, as on the card) is shown
+  as a ratio but is not in the index.
+- **Alert baseline:** started by the user after calibration with a confirmation; 3 minutes of
+  valid time within 6 minutes of clock time and at least 10 blinks, otherwise it fails with the
+  reason. Cleared by recalibration; kept across a camera restart; memory only.
+- **Index:** `ECI = mean of min(max(X, floor) / max(X0, floor), 5)` over the three factors, with
+  floors 0.01, 0.2 per minute, and 100 ms. Equal to exactly 1 for a window identical to the
+  baseline (tested).
+- **Gating:** valid time >= 70% of the window, median frame rate >= 24 fps, at least 3 blinks
+  under 500 ms; otherwise "Not enough data" with the reason, and a gap in the trend.
+- **Windows:** 60 s and 5 min, both evaluated every 10 s after the baseline. The card shows the
+  5-minute value with the band label and a gauge (position and tick marks, not colour); bands use
+  the provisional cut-offs 1.5 and 2.5, labelled as unvalidated in the Eye closure tab.
+
+**Tests** (`src/blink/sleepiness.test.ts`, 21; `src/app/blinkPipeline.test.ts`, 2 more;
+UI model and panel tests, 9), all on synthetic sequences at 30 fps with open EAR 0.30:
+
+- Baseline of one 150 ms blink every 4 s: closed fraction 0.0375 (within 0.005), 15 blinks/min,
+  mean 150 ms, no long closures.
+- Same behaviour after the baseline: ECI within 0.05 of 1, band "Near your baseline".
+- Blinks of 300 ms plus one 800 ms closure per minute: duration ratio 2, long-closure ratio 5
+  (capped), closed-fraction ratio 2.36, ECI 3.12 (each within 0.05), band "Well above".
+- Blink duration rising 150 to 400 ms over 11 minutes: the 5-minute ECI never falls by more than
+  0.01 between 10 s steps and rises by more than 0.5 overall.
+- "Not enough data", never a number, for: no calibration, no baseline, face lost for half the
+  window, head turned for 60% of it, frame gaps, 20 fps, fewer than 3 blinks, and a window longer
+  than the recorded time.
+- Changing only the blink rate leaves the ECI unchanged.
+
+**Browser check** (production build, headless Chrome, synthetic face without blinks as the
+camera): card and tab texts before calibration, after calibration, and while recording the
+baseline (13% after 30 s); the confirmation gets focus; after about 3 minutes the baseline failed
+with "too few blinks", as expected for a face that never blinks. No external requests, no errors.
+The trend plots, gauge, and summary with real values were checked only in unit and server-render
+tests, because the synthetic face cannot blink.

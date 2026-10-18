@@ -115,14 +115,18 @@ Reported but **not** part of the ECI:
 ## 5. Eye-Closure Index
 
 ```
-ratio_C = min(C / max(C0, 0.01),   5)
-ratio_L = min(L / max(L0, 0.2),    5)
-ratio_D = min(D / max(D0, 100 ms), 5)
+ratio_C = min(max(C, 0.01)   / max(C0, 0.01),   5)
+ratio_L = min(max(L, 0.2)    / max(L0, 0.2),    5)
+ratio_D = min(max(D, 100 ms) / max(D0, 100 ms), 5)
 
 ECI = (ratio_C + ratio_L + ratio_D) / 3        equal weights
 ```
 
-ECI = 1 means "the same as the baseline"; higher means more eye closure than the baseline.
+ECI = 1 means "the same as the baseline"; higher means more eye closure than the baseline. The
+floor applies to both the window value and the baseline value: values below the measurement
+resolution are treated as the floor. (Changed 2026-10-18 before any data: with the floor on the
+baseline only, a window identical to a baseline with no long closures gave ratio_L = 0, so ECI was
+0.67 instead of 1.)
 
 **Fixed constants, chosen before any data from the measurement resolution, not from data:**
 

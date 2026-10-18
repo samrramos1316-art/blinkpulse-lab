@@ -32,15 +32,55 @@ export function SessionTimeline({ bins }: { bins: readonly MinuteBin[] }) {
   const usable = bins.map((b) => b.usable);
   const frames = bins.flatMap((b) => (b.medianFrameMs === null ? [] : [b.medianFrameMs]));
   const frameMs = frames.length ? median(frames) : null;
+  const present = (xs: (number | null)[]) => xs.filter((x): x is number => x !== null);
+  const usableCount = usable.filter(Boolean).length;
+  const rates = present(rate);
+  const durs = present(dur);
+  const longTotal = present(longs).reduce((a, b) => a + b, 0);
 
   const perMin = (v: number) => `${v.toFixed(0)} per minute`;
   const ms = (v: number) => `${v.toFixed(0)} ms`;
   const pct = (v: number) => `${v.toFixed(1)}%`;
   const count = (v: number) => v.toFixed(0);
+  /** Value of the last usable minute, for the plot header. */
+  const latest = (xs: (number | null)[], f: (v: number) => string) => {
+    for (let i = xs.length - 1; i >= 0; i--) {
+      const x = xs[i];
+      if (x !== null && x !== undefined) return `latest ${f(x)}`;
+    }
+    return undefined;
+  };
 
   return (
     <div className="session">
       <p className="session__intro">{SESSION_COPY.intro}</p>
+
+      <dl className="stats">
+        <div className="stat">
+          <dt className="stat__label">Minutes measured</dt>
+          <dd className="stat__value tabular">{bins.length}</dd>
+        </div>
+        <div className="stat">
+          <dt className="stat__label">Usable minutes</dt>
+          <dd className="stat__value tabular">{`${String(usableCount)} of ${String(bins.length)}`}</dd>
+        </div>
+        <div className="stat">
+          <dt className="stat__label">Median blink rate</dt>
+          <dd className="stat__value tabular">
+            {rates.length ? `${median(rates).toFixed(1)} /min` : '-'}
+          </dd>
+        </div>
+        <div className="stat">
+          <dt className="stat__label">Median blink duration</dt>
+          <dd className="stat__value tabular">
+            {durs.length ? `${median(durs).toFixed(0)} ms` : '-'}
+          </dd>
+        </div>
+        <div className="stat">
+          <dt className="stat__label">Long closures</dt>
+          <dd className="stat__value tabular">{longTotal}</dd>
+        </div>
+      </dl>
 
       <div className="session__coverage">
         <p className="plot__title" id="coverage-title">
@@ -65,9 +105,10 @@ export function SessionTimeline({ bins }: { bins: readonly MinuteBin[] }) {
         </p>
       </div>
 
-      <div className="session__plots">
+      <div className="plot-grid plot-grid--2">
         <SeriesPlot
           title="Blink rate (per minute)"
+          headline={latest(rate, perMin)}
           values={rate}
           format={count}
           usable={usable}
@@ -75,6 +116,7 @@ export function SessionTimeline({ bins }: { bins: readonly MinuteBin[] }) {
         />
         <SeriesPlot
           title="Median blink duration (ms)"
+          headline={latest(dur, ms)}
           values={dur}
           format={count}
           usable={usable}
@@ -82,6 +124,7 @@ export function SessionTimeline({ bins }: { bins: readonly MinuteBin[] }) {
         />
         <SeriesPlot
           title="Eye-closed fraction (%)"
+          headline={latest(closed, pct)}
           values={closed}
           format={(v) => v.toFixed(1)}
           usable={usable}
@@ -89,6 +132,7 @@ export function SessionTimeline({ bins }: { bins: readonly MinuteBin[] }) {
         />
         <SeriesPlot
           title="Long closures (0.5-2 s)"
+          headline={latest(longs, count)}
           integer
           values={longs}
           format={count}

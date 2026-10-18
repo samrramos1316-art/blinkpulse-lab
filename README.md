@@ -35,6 +35,23 @@ npm run eval -- frames.csv reference.csv       # offline pulse evaluation (V2)
 npm run ppg:ref -- ppg.csv reference.csv       # reference BPM from a ground-truth PPG (V2a)
 ```
 
+### On a phone
+
+`npm run dev:phone` serves the app over https on your local network, so a phone on the same Wi-Fi
+can use its front camera (phone browsers allow the camera only on secure pages):
+
+1. Stop `npm run dev` if it is running (both use port 5173).
+2. Run `npm run dev:phone`. The first time, it makes a self-signed certificate in `.cert/` (needs
+   `openssl`, included with Git for Windows; the folder is git-ignored) and prints the address,
+   e.g. `https://10.0.1.28:5173/`. If Windows asks whether Node.js may use the network, allow it
+   on private networks only.
+3. Open that address on the phone and accept the certificate warning once.
+
+Everything still runs on the phone: the computer only serves the page files. While measuring, the
+app asks the phone to keep the screen on (Screen Wake Lock), because a locked screen pauses the
+camera. Phone cameras and processors vary; check the measured frame rate under "Timing details"
+(the indicator and blink timing need at least 24 fps).
+
 Developer pages: `#explorer` (Landmark Explorer, to check landmark indices on live video),
 `#v1` (validation V1: analyse a local recording, hand-label blinks, score), and `#v2` (validation
 V2a: pulse trace from a local video file).

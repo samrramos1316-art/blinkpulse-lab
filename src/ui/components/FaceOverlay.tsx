@@ -4,6 +4,7 @@ import type { Point } from '../../blink/ear.ts';
 import type { QualityLevel } from '../../rppg/quality.ts';
 import { REGION_IDS, type RegionId } from '../../rppg/roi.ts';
 import { REGION_LABEL } from '../copy.ts';
+import { labelPosition } from '../plot/overlayLabels.ts';
 
 /** Line style per quality level: shape, not colour alone (Patch A). */
 const DASH: Record<QualityLevel | 'none', number[]> = {
@@ -116,20 +117,20 @@ function drawOverlay(
   }
   if (!o.regions) return;
   ctx.font = '12px system-ui, sans-serif';
-  ctx.textBaseline = 'bottom';
   for (const id of REGION_IDS) {
     const poly = o.regions[id];
     if (!poly) continue;
     const level = levels[id] ?? 'none';
     path(poly, true);
     stroke(DASH[level]);
-    const top = poly.map(map).reduce((a, b) => (b.y < a.y ? b : a));
     const text = `${REGION_LABEL[id]}: ${LEVEL_TEXT[level]}`;
+    const at = labelPosition(poly.map(map), ctx.measureText(text).width, id, W);
+    ctx.textBaseline = at.baseline;
     ctx.setLineDash([]);
     ctx.lineWidth = 3;
     ctx.strokeStyle = shadow;
-    ctx.strokeText(text, top.x - ctx.measureText(text).width / 2, top.y - 3);
+    ctx.strokeText(text, at.x, at.y);
     ctx.fillStyle = fg;
-    ctx.fillText(text, top.x - ctx.measureText(text).width / 2, top.y - 3);
+    ctx.fillText(text, at.x, at.y);
   }
 }

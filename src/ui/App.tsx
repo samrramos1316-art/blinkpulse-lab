@@ -1,12 +1,16 @@
 import { useState } from 'react';
 import { useBlink } from '../app/useBlink.ts';
 import { useCapture } from '../app/useCapture.ts';
+import { useWakeLock } from '../app/useWakeLock.ts';
 import { blinkRateCard, closedFractionCard } from './blinkDisplay.ts';
+import { indicatorCard } from './indicatorDisplay.ts';
 import { pulseCard } from './pulseDisplay.ts';
 import { liveStatusText } from './captureStatus.ts';
 import { EyeIcon, GaugeIcon, PulseIcon, TimerIcon } from './icons/Icons.tsx';
 import { EarPlot } from './components/EarPlot.tsx';
 import { FaceOverlay } from './components/FaceOverlay.tsx';
+import { IndicatorGauge } from './components/IndicatorGauge.tsx';
+import { IndicatorPanel } from './components/IndicatorPanel.tsx';
 import { PulsePanel } from './components/PulsePanel.tsx';
 import { Footer } from './components/Footer.tsx';
 import { Header } from './components/Header.tsx';
@@ -30,10 +34,13 @@ export function App({ initialSetupOpen }: AppProps) {
   const [showTiming, setShowTiming] = useState(import.meta.env.DEV);
 
   const live = capture.snapshot.status === 'running';
+  useWakeLock(live);
   const pulse = pulseCard(blink.pulse, live, blink.snapshot.faceStatus);
   const regionLevels = Object.fromEntries((blink.pulse?.regions ?? []).map((r) => [r.id, r.level]));
   const rateCard = blinkRateCard(blink.snapshot, live);
   const closedCard = closedFractionCard(blink.snapshot, live);
+  const calibrated = blink.snapshot.thresholds !== null;
+  const eciCard = indicatorCard(blink.snapshot.indicator, live, calibrated);
   const start = () => {
     blink.ensureLandmarker();
     capture.start();
@@ -119,9 +126,12 @@ export function App({ initialSetupOpen }: AppProps) {
               <MetricCard
                 icon={<GaugeIcon />}
                 label={INDICATOR.title}
-                value="-"
-                status={INDICATOR.subtitle}
-              />
+                value={eciCard.value}
+                {...(eciCard.gauge === null ? {} : { unit: 'x baseline' })}
+                status={eciCard.status}
+              >
+                {eciCard.gauge === null ? null : <IndicatorGauge value={eciCard.gauge} />}
+              </MetricCard>
             </div>
           )}
         </div>
@@ -158,6 +168,21 @@ export function App({ initialSetupOpen }: AppProps) {
                 id: 'session',
                 label: 'Session timeline',
                 render: () => <SessionTimeline bins={blink.snapshot.session} />,
+              },
+              {
+                id: 'eye-closure',
+                label: 'Eye closure',
+                render: () => (
+                  <IndicatorPanel
+                    indicator={blink.snapshot.indicator}
+                    controls={{
+                      calibrated,
+                      live,
+                      start: blink.startBaseline,
+                      cancel: blink.cancelBaseline,
+                    }}
+                  />
+                ),
               },
             ]}
           />

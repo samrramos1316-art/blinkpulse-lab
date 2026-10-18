@@ -12,11 +12,21 @@ interface MetricCardProps {
   status: string;
   /** Quality chip (text plus a shape per level, never colour alone). */
   quality?: QualityLevel | null;
+  /** Extra visual under the value (e.g. a gauge); the text must carry the same meaning. */
+  children?: ReactNode;
 }
 
 const CHIP_MARK: Record<QualityLevel, string> = { good: '●', fair: '◐', poor: '○' };
 
-export function MetricCard({ icon, label, value, unit, status, quality }: MetricCardProps) {
+export function MetricCard({
+  icon,
+  label,
+  value,
+  unit,
+  status,
+  quality,
+  children,
+}: MetricCardProps) {
   return (
     <article className="card metric-card">
       <h2 className="metric-card__label">
@@ -27,6 +37,7 @@ export function MetricCard({ icon, label, value, unit, status, quality }: Metric
         <span className="tabular">{value}</span>
         {unit ? <span className="metric-card__unit">{unit}</span> : null}
       </p>
+      {children}
       {quality ? (
         <p className="quality-chip" data-level={quality}>
           <span aria-hidden="true">{CHIP_MARK[quality]}</span>
