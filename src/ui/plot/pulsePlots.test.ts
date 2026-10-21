@@ -3,6 +3,10 @@ import { synthRgb } from '../../../tools/synth.ts';
 import { estimateWindow, type WindowEstimate } from '../../rppg/hrEstimator.ts';
 import { projectChart, symmetricRange } from './chart.ts';
 import {
+  describeRgb,
+  describeUnfiltered,
+  rgbSpec,
+  unfilteredSpec,
   describeFilter,
   describeSpectrum,
   describeWaveform,
@@ -74,5 +78,37 @@ describe('pulse plots', () => {
       /^Filtered pulse signal \(Forehead\), last 10 s: 1[12] beats/,
     );
     expect(describeWaveform(null, 'Forehead')).toContain('no complete 10 s window yet');
+  });
+});
+
+describe('Signal Lab plots', () => {
+  it('shows the colour channels as % of their means, told apart by line style', () => {
+    const est = estimate();
+    const spec = rgbSpec(est);
+    expect(spec.lines.map((l) => l.style)).toEqual(['dashed', 'dotted', 'main']);
+    expect(spec.lines[0]?.ys.length).toBe(est.rgb.r.length);
+    // A 0.5% pulse on the synthetic trace: the green swing is about 1% peak to peak.
+    expect(spec.y.max).toBeGreaterThan(0.4);
+    expect(spec.y.max).toBeLessThan(5);
+    expect(describeRgb(est, 'Forehead')).toMatch(/green over \d+\.\d\d%/);
+    expect(describeRgb(null, 'Forehead')).toContain('no complete 10 s window');
+  });
+
+  it('plots the unfiltered POS output on the same 10 s axis', () => {
+    const est = estimate();
+    const spec = unfilteredSpec(est);
+    expect(spec.lines[0]?.ys).toBe(est.unfiltered);
+    expect(spec.x.min).toBeCloseTo(-est.unfiltered.length / 30, 6);
+    expect(describeUnfiltered(est, 'Forehead')).toContain('300 samples at 30 Hz');
+  });
+});
+
+describe('pulse rate hidden at Poor quality (PROJECT_SPEC 5.4)', () => {
+  it('labels the peak in Hz and leaves BPM out of the text', () => {
+    const est = estimate();
+    expect(spectrumSpec(est, false).markers[0]?.label).toMatch(/^1\.\d\d Hz$/);
+    expect(describeSpectrum(est, 'Forehead', false)).not.toMatch(/BPM\)/);
+    expect(describeSpectrum(est, 'Forehead', false)).toContain('quality too low');
+    expect(describeWaveform(est, 'Forehead', false)).not.toContain('BPM');
   });
 });

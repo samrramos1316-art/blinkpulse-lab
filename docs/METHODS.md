@@ -3,6 +3,34 @@
 _Filled in phase by phase. Numbers here come only from tests or validation runs, with their
 sample sizes._
 
+## Pipeline overview
+
+```
+camera frame (requestVideoFrameCallback, ms timestamp)
+  |-- FrameClock: dt, jitter, gap flags ............................ src/capture/frameClock.ts
+  |-- MediaPipe Face Landmarker (pre-trained, on device): 478 points  src/vision/
+  |     |-- head pose (yaw/pitch vs calibration) -> valid / not valid
+  |     |
+  |     |-- Stream A, blinks: EAR per eye (pixel coordinates)        src/blink/
+  |     |     calibration (10 s) -> close 0.70 b / reopen 0.80 b
+  |     |     hysteresis state machine, sub-frame crossings -> blink events
+  |     |     -> blink rate, durations, eye-closed fraction (rolling 60 s)
+  |     |     -> per-minute timeline (sessionSummary.ts)
+  |     |     -> eye-closure indicator: factors vs alert baseline (sleepiness.ts)
+  |     |
+  |     |-- Stream B, pulse: forehead + both cheek polygons           src/rppg/
+  |           mean R, G, B of accepted pixels per frame
+  |           every 1 s, per region, last 10 s:
+  |             resample to 30 Hz -> POS -> Butterworth 0.7-3.0 Hz (filtfilt)
+  |             -> Hann + FFT (4096) -> band peak (parabolic) -> BPM, SQI
+  |             -> beat-spacing cross-check, quality flags -> Good / Fair / Poor
+  |           fusion of kept regions -> median smoothing -> shown at Fair or better
+  |
+  `-- nothing is stored; numeric exports only after a user action
+```
+
+The Signal Lab view (Phase 5) shows Stream B's steps for one region side by side.
+
 ## DSP core (`src/dsp/`, Phase 1)
 
 All signal processing is hand-written TypeScript with no DSP libraries. It is checked against
@@ -543,3 +571,97 @@ number appeared, and one stimulus left unanswered: RTs of about 216-229 ms (the 
 adds about 25 ms), 420 ms responses and the 30 s non-response scored as lapses (14 of 53 stimuli),
 median RT 225.8 ms; the session was then stopped and exported with `end_reason=stopped`. These
 check the plumbing only; they say nothing about the RT accuracy of a real display and keyboard.
+
+## V3 analysis script (`tools/analyze_v3.py`, Phase 4B)
+
+Implements `docs/STUDY_PROTOCOL.md` Sections 7-9 on the study-mode CSV files (Python, `tools/`
+only, NumPy 2.4.6 and SciPy 1.17.1 as pinned in `tools/requirements.txt`).
+
+```sh
+.venv/Scripts/python tools/analyze_v3.py data/ --dev P01 --out report.md   # held-out analysis
+.venv/Scripts/python tools/analyze_v3.py data/ --dev P01 --bands           # band rule (Section 7)
+.venv/Scripts/python -m unittest tools/test_analyze_v3.py                  # tests
+```
+
+- **Reading:** the `blinkpulse-study-1` format (`# key=value` header lines, `#section=` tables).
+  A file with another format, or the same participant and session twice, stops the script.
+- **Exclusions (Section 8), in order:** no blink calibration; no alert baseline; work block
+  shorter than 15 minutes. A rating is usable when it was answered and its 5-minute window passed
+  gating. A participant is analysed with at least 5 usable ratings and 2 different values. Every
+  exclusion is listed in the report with its reason.
+- **Formula check:** the ECI is recomputed from the exported factors and baseline with the
+  Section 5 floors and cap, and every exported value must agree within 0.001 (the export rounds
+  to 4 decimals). This also checks that the Python formula matches the app's `eciFromFactors`.
+- **H1 and controls:** Spearman rho (average ranks) per participant for the ECI, time on task
+  (minutes from the start of the work block to the prompt), and blink rate (the window's blinks
+  per valid minute) against the rating; 95% percentile bootstrap intervals from 10,000 resampled
+  pairs (D14 for constant resamples); one-sided Wilcoxon signed-rank test on the ECI rhos; for
+  each control, the median of rho(ECI) - rho(control) with a 10,000-resample bootstrap interval
+  over participants, and the Section 1 rule ("adds nothing" when the interval includes 0).
+- **H2:** end minus start PVT-B for the ECI and the raw factors (D16), two-sided Wilcoxon across
+  sessions with both windows usable; Spearman of the PVT-B-window ECI with lapses, median RT, and
+  mean 1/RT over all runs (D18), with bootstrap intervals.
+- **Sensitivity:** participant-level baseline (the session with the lowest baseline rating, the
+  lower session number on a tie; ratios recomputed offline), without "baseline not alert"
+  sessions, and the 60 s window (D15). Exploratory pooled AUC for ratings of 7 or more (D17).
+- **Bands:** the 95th percentile (linear interpolation) of the development participants' 5-minute
+  ECI at ratings of 4 or less; final cut-offs only with at least 20 such windows and P > 1.
+- **Reproducibility:** one NumPy generator seeded with 20261017; the same files give the same
+  report (tested). The report states the app commits and the rating wording of the files, and
+  warns when the wording was the placeholder.
+
+**Tests** (`tools/test_analyze_v3.py`, 17, all passing on 2026-10-20): reading a file written by
+the app's own export code (`test/fixtures/study/blinkpulse-study-P90-S1.csv`, kept in step with
+the format by `test/studyFixture.test.ts`); the formula against the app's values, floors and cap;
+the vectorised Spearman against SciPy on 50 random cases; redraws of constant resamples; AUC;
+six synthetic participants whose ratings rise with the ECI out of time order (rho = 1 each,
+Wilcoxon p = 1/64, time-on-task control interval excludes 0); the same with the ECI reversed
+(reported as not supported); each session and participant exclusion; development participants
+left out; duplicate sessions rejected; the participant-level baseline choice; the 60 s trend
+lookup; the band rule with fewer than 20 and with 20 windows; a deterministic report.
+
+**Not verified:** any real study data (none exists; the protocol is not frozen).
+
+## Signal Lab, About, and the Phase 5 checks
+
+- **Signal Lab** (header button, a separate view that replaces the signal tabs): for the chosen
+  region, the five steps of the last 10 s estimate, each with a caption: (1) the resampled R, G, B
+  means as % change from their window means (green thick solid, red dashed, blue dotted, said in
+  words below the plot), (2) the POS output before filtering, (3) the filter's magnitude response,
+  (4) the filtered waveform with detected beats, (5) the spectrum with the band and the peak. The
+  plots come from the same `WindowEstimate` the app used (`hrEstimator.ts` now keeps the
+  resampled channels and the unfiltered signal). Each plot has a text alternative.
+- **Pulse rate hidden at Poor quality in plots too:** the spectrum peak label, the spectrum and
+  waveform text alternatives, and the Signal Lab summary give a BPM only when the region's
+  quality is Fair or better (PROJECT_SPEC 5.4); otherwise the peak is labelled in Hz. Before this
+  change the Pulse tab's spectrum labelled the peak in BPM at any quality.
+- **About dialog** (header button, native modal `<dialog>`: Escape closes it, focus starts on its
+  title): the disclaimer, a short methods summary, limitations, and a read-only table of the
+  fixed parameters, read from the constants in the code (`src/ui/parameters.ts`). PROJECT_SPEC
+  5.5 describes a Settings view with editable thresholds, window lengths, and head-pose limits;
+  they are shown but not editable because they are frozen for V1/V2 (7.1) and the study
+  (gate G-E). "Record numeric trace" stays in the Pulse tab.
+- **Tests:** plot specs for the colour channels and POS output, the Hz-only label at Poor quality,
+  the Signal Lab summary text, the five steps with captions and empty states, the view toggle,
+  and the About content (disclaimer and parameters) (`pulsePlots.test.ts`, `pulseDisplay.test.ts`,
+  `SignalLab.test.tsx`).
+
+**Browser checks** (2026-10-20, production build, headless Chrome, synthetic rendered face as the
+fake camera, no real person):
+
+- Signal Lab: the header button toggles the view (`aria-pressed`), region radios work, the filter
+  response is drawn, and the other plots show their reason ("no complete 10 s window yet").
+  **Live pulse data in the Signal Lab plots could not be checked:** during these runs the computer
+  was also busy with other programs (about 51% CPU load), and headless Chrome dropped about 2-5
+  frames per second (e.g. 67 dropped frames and 25 gaps in 18 s), so no 10 s window was free of
+  breaks and the app correctly showed "Interrupted in the last 10 s". The same chart code drew
+  live data in the Phase 4 check.
+- About: opens from the keyboard as a modal with focus on its title, closes with Escape and with
+  Close.
+- Keyboard: Tab reaches the skip link, theme, Guide, About, Signal Lab, Start, the setup buttons,
+  the signal tabs, and plot descriptions, each with a visible focus ring; arrow keys move between
+  tabs; first-run setup completes with Enter only.
+- Reduced motion (`prefers-reduced-motion: reduce`): no element has a transition or animation.
+- Width: no horizontal scrolling at 360, 768, and 1280 px, in light and dark themes
+  (screenshots in `docs/screenshots/`, synthetic face only).
+- No errors and no requests to other hosts in any of these runs.

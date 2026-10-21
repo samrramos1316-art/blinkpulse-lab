@@ -12,6 +12,8 @@ import { FaceOverlay } from './components/FaceOverlay.tsx';
 import { IndicatorGauge } from './components/IndicatorGauge.tsx';
 import { IndicatorPanel } from './components/IndicatorPanel.tsx';
 import { PulsePanel } from './components/PulsePanel.tsx';
+import { SignalLab } from './components/SignalLab.tsx';
+import { AboutDialog } from './components/AboutDialog.tsx';
 import { Footer } from './components/Footer.tsx';
 import { Header } from './components/Header.tsx';
 import { MetricCard } from './components/MetricCard.tsx';
@@ -25,13 +27,17 @@ import { INDICATOR, METRIC } from './strings.ts';
 interface AppProps {
   /** Override the stored first-run flag (tests). */
   initialSetupOpen?: boolean;
+  /** Open the Signal Lab view first (tests). */
+  initialLab?: boolean;
 }
 
-export function App({ initialSetupOpen }: AppProps) {
+export function App({ initialSetupOpen, initialLab = false }: AppProps) {
   const capture = useCapture();
   const blink = useBlink(capture);
   const [setupOpen, setSetupOpen] = useState(() => initialSetupOpen ?? !readSetupDone());
   const [showTiming, setShowTiming] = useState(import.meta.env.DEV);
+  const [lab, setLab] = useState(initialLab);
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   const live = capture.snapshot.status === 'running';
   useWakeLock(live);
@@ -63,6 +69,21 @@ export function App({ initialSetupOpen }: AppProps) {
         }}
         onOpenGuide={() => {
           setSetupOpen(true);
+        }}
+        onOpenAbout={() => {
+          setAboutOpen(true);
+        }}
+        lab={{
+          open: lab,
+          onToggle: () => {
+            setLab((v) => !v);
+          },
+        }}
+      />
+      <AboutDialog
+        open={aboutOpen}
+        onClose={() => {
+          setAboutOpen(false);
         }}
       />
       <main id="main" className="app-main" tabIndex={-1}>
@@ -135,58 +156,62 @@ export function App({ initialSetupOpen }: AppProps) {
             </div>
           )}
         </div>
-        <section className="card plots" aria-labelledby="plots-title">
-          <h2 id="plots-title" className="section-title">
-            Signals
-          </h2>
-          <Tabs
-            label="Signal views"
-            tabs={[
-              {
-                id: 'blinks',
-                label: 'Blinks',
-                render: () => <EarPlot pipeline={blink.pipeline} active={live} />,
-              },
-              {
-                id: 'pulse',
-                label: 'Pulse',
-                render: () => (
-                  <PulsePanel
-                    pulse={blink.pulse}
-                    record={{
-                      live,
-                      recording: blink.recording,
-                      start: blink.startRecording,
-                      stop: blink.stopRecording,
-                      pending: blink.pendingTrace,
-                      clearPending: blink.clearPendingTrace,
-                    }}
-                  />
-                ),
-              },
-              {
-                id: 'session',
-                label: 'Session timeline',
-                render: () => <SessionTimeline bins={blink.snapshot.session} />,
-              },
-              {
-                id: 'eye-closure',
-                label: 'Eye closure',
-                render: () => (
-                  <IndicatorPanel
-                    indicator={blink.snapshot.indicator}
-                    controls={{
-                      calibrated,
-                      live,
-                      start: blink.startBaseline,
-                      cancel: blink.cancelBaseline,
-                    }}
-                  />
-                ),
-              },
-            ]}
-          />
-        </section>
+        {lab ? (
+          <SignalLab pulse={blink.pulse} />
+        ) : (
+          <section className="card plots" aria-labelledby="plots-title">
+            <h2 id="plots-title" className="section-title">
+              Signals
+            </h2>
+            <Tabs
+              label="Signal views"
+              tabs={[
+                {
+                  id: 'blinks',
+                  label: 'Blinks',
+                  render: () => <EarPlot pipeline={blink.pipeline} active={live} />,
+                },
+                {
+                  id: 'pulse',
+                  label: 'Pulse',
+                  render: () => (
+                    <PulsePanel
+                      pulse={blink.pulse}
+                      record={{
+                        live,
+                        recording: blink.recording,
+                        start: blink.startRecording,
+                        stop: blink.stopRecording,
+                        pending: blink.pendingTrace,
+                        clearPending: blink.clearPendingTrace,
+                      }}
+                    />
+                  ),
+                },
+                {
+                  id: 'session',
+                  label: 'Session timeline',
+                  render: () => <SessionTimeline bins={blink.snapshot.session} />,
+                },
+                {
+                  id: 'eye-closure',
+                  label: 'Eye closure',
+                  render: () => (
+                    <IndicatorPanel
+                      indicator={blink.snapshot.indicator}
+                      controls={{
+                        calibrated,
+                        live,
+                        start: blink.startBaseline,
+                        cancel: blink.cancelBaseline,
+                      }}
+                    />
+                  ),
+                },
+              ]}
+            />
+          </section>
+        )}
       </main>
       <Footer />
     </>

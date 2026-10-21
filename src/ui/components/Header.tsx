@@ -8,10 +8,21 @@ interface HeaderProps {
   onStart: () => void;
   onStop: () => void;
   onOpenGuide: () => void;
+  onOpenAbout: () => void;
+  /** Signal Lab view toggle. */
+  lab: { open: boolean; onToggle: () => void };
   calibrate: { enabled: boolean; label: string; onClick: () => void };
 }
 
-export function Header({ status, onStart, onStop, onOpenGuide, calibrate }: HeaderProps) {
+export function Header({
+  status,
+  onStart,
+  onStop,
+  onOpenGuide,
+  onOpenAbout,
+  lab,
+  calibrate,
+}: HeaderProps) {
   // Stop is offered while waiting for permission too, so the request can be abandoned.
   const active = status === 'running' || status === 'starting';
 
@@ -38,6 +49,17 @@ export function Header({ status, onStart, onStop, onOpenGuide, calibrate }: Head
           <button type="button" className="btn btn-ghost" onClick={onOpenGuide}>
             <HelpIcon size={18} />
             <span className="btn-label-wide">Guide</span>
+          </button>
+          <button type="button" className="btn btn-ghost" onClick={onOpenAbout}>
+            About
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            aria-pressed={lab.open}
+            onClick={lab.onToggle}
+          >
+            Signal Lab
           </button>
           {status === 'running' ? (
             <button

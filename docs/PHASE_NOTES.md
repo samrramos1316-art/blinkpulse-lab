@@ -415,3 +415,91 @@ is not built.
 - Draft decision D5 is implemented as drafted (preview, blink cards, and EAR plot hidden too).
 - "New session" reloads the page, so each session gets a fresh calibration and baseline.
 - Study mode has no link from the main app; it is reached at `#study` (README).
+
+## Phase 4B: Analysis script (2026-10-20)
+
+**Status: everything in Phase 4B is built; Phase 4B is not accepted.** Acceptance needs the
+protocol in git history before the first participant (it is committed, but as a draft that is not
+frozen) and validation V3 run and reported, which needs participants.
+
+**Verified**
+
+- `tools/analyze_v3.py` implements protocol Sections 7-9; 17 Python tests pass
+  (`tools/test_analyze_v3.py`), including a file written by the app's own export code.
+- `npm run check` passes (see the Phase 5 note for the count).
+
+**Not verified**
+
+- Any real study data.
+
+**Deviations and decisions**
+
+- Five places where the protocol's analysis plan was silent are listed as D14-D18 in Section 13
+  and built with the draft choice; they are for the author to accept or change before freezing.
+- `src/study/` was not added to the pure-code `tsconfig.pure.json` list; it has no DOM use but is
+  only used by the app and tests.
+
+## Phase 5: Polish and packaging (2026-10-20)
+
+**Status: built; not accepted.** The Section 11 checklist is not complete; see below.
+
+**Built**
+
+- Signal Lab view (raw colour channels, POS output, filter response, filtered waveform, spectrum,
+  per region, with captions and text alternatives).
+- About dialog with the disclaimer, methods summary, limitations, and the fixed parameters.
+- Pulse rate no longer shown in the spectrum label or plot text at Poor quality.
+- Docs: METHODS (pipeline diagram, analysis script, Phase 5 checks), VALIDATION (V3 procedure),
+  LIMITATIONS (Section 9 expanded), ETHICS_AND_PRIVACY (data handling table, consent, fairness),
+  README (status, screenshots, Signal Lab, analysis, AI disclosure), DEMO_SCRIPT.
+- Screenshots at 360, 768, 1280 px, light and dark, synthetic face only (`docs/screenshots/`).
+- Trace recording and the offline eval CLI already existed (built in Phase 4 because V2 needs
+  them).
+
+**Verified**
+
+- `npm run check`: typecheck, lint, format, and 527 Vitest tests in 50 files pass.
+- Browser checks (headless Chrome, synthetic face): Signal Lab structure and empty states, About
+  dialog keyboard use, Tab order with visible focus, arrow keys in tabs, first run with Enter only,
+  no transitions under reduced motion, no horizontal scroll at 360/768/1280 in both themes, no
+  errors, no external requests. Details in `docs/METHODS.md`.
+
+**Not verified**
+
+- Live pulse data in the Signal Lab plots: the computer was busy with other programs and headless
+  Chrome dropped 2-5 frames per second, so every 10 s window was (correctly) marked interrupted.
+  Check by hand: Start, Calibrate, Signal Lab, wait 10 s.
+- A screen reader; touch use on a phone for the new views; Firefox and Safari.
+- The SPEC_AMENDMENT_02 usability check (2 people who have not seen the app) needs the author.
+
+**Deviations and decisions**
+
+- PROJECT_SPEC 5.5 "Settings" with editable thresholds is replaced by a read-only parameter table
+  in About: the values are frozen for validation and the study, so making them editable would
+  invite changes that break those rules. Proposed spec change: drop "editable" from 5.5.
+- The Signal Lab is a toggle in the main page (it needs the running camera), not a separate URL.
+
+**Section 11 Definition of Done (with the amendments)**
+
+| Item                                                           | State                                                                   |
+| -------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `npm run check` passes                                         | Done                                                                    |
+| Phase 1 fixture tests against SciPy/NumPy                      | Done                                                                    |
+| Landmark indices and ROI verified in the Explorer              | Eyes done; forehead and cheek regions need the author's live check      |
+| V1 and V2 reported with sample sizes                           | Not run (needs recordings and a reference device)                       |
+| No network requests after load                                 | Verified in every browser run so far                                    |
+| Wording rules (grep test)                                      | Done (`test/designRules.test.ts`)                                       |
+| Study protocol before first session; V3 reported               | Draft committed, not frozen; V3 not run                                 |
+| No HRV in the UI                                               | Done                                                                    |
+| Accessibility (keyboard, contrast, reduced motion)             | Done in automated checks; screen reader not checked                     |
+| README, METHODS, VALIDATION, LIMITATIONS, ETHICS               | Written; VALIDATION has no results yet                                  |
+| Live demo deployed; demo video recorded                        | Not done: deploying needs the author's go-ahead; video needs the author |
+| Multi-region pulse validated, fusion vs best single region     | Not run (V2b)                                                           |
+| Blink timeline gaps and text alternatives                      | Done                                                                    |
+| Study mode hides the indicator (tested)                        | Done                                                                    |
+| Consent/assent forms before first session; guardian signatures | Drafts committed; signatures when recruiting                            |
+| Pulse and HRV not inputs to the indicator                      | Done                                                                    |
+| Colours from tokens; contrast test                             | Done                                                                    |
+| Light/dark at 360/768/1280 with screenshots                    | Done                                                                    |
+| Keyboard-only first run                                        | Done                                                                    |
+| Usability check with 2 people                                  | Not done (needs the author)                                             |

@@ -21,6 +21,87 @@ const range = (a: number, b: number, step: number) => {
   return out;
 };
 
+function timeAxis(n: number): { xs: Float64Array; dur: number } {
+  const dur = n / FS;
+  return { xs: Float64Array.from({ length: n }, (_, i) => i / FS - dur), dur };
+}
+
+const percentTicks = (m: number): number[] => (m >= 0.5 ? [-m, 0, m] : [0]);
+
+/** Signal Lab step 1: the three colour channels, as % change from their window means. */
+export function rgbSpec(est: WindowEstimate): ChartSpec {
+  const { xs, dur } = timeAxis(est.rgb.g.length);
+  const pct = (a: Float64Array) => a.map((v) => v * 100);
+  const r = pct(est.rgb.r);
+  const g = pct(est.rgb.g);
+  const b = pct(est.rgb.b);
+  const m = Math.max(symmetricRange(r), symmetricRange(g), symmetricRange(b)) * 1.1;
+  const tick = Math.round(m * 10) / 10;
+  return {
+    x: {
+      min: -dur,
+      max: 0,
+      ticks: range(-10, 0, 2),
+      format: (v) => (v === 0 ? 'now' : `${v.toFixed(0)} s`),
+    },
+    y: { min: -m, max: m, ticks: percentTicks(tick), format: (v) => `${v.toFixed(1)}%` },
+    lines: [
+      { xs, ys: r, style: 'dashed' },
+      { xs, ys: b, style: 'dotted' },
+      { xs, ys: g, style: 'main' },
+    ],
+    markers: [],
+    bands: [],
+    vlines: [],
+  };
+}
+
+/** Signal Lab step 2: POS output, before the band-pass filter. */
+export function unfilteredSpec(est: WindowEstimate): ChartSpec {
+  const { xs, dur } = timeAxis(est.unfiltered.length);
+  const m = symmetricRange(est.unfiltered) * 1.1;
+  return {
+    x: {
+      min: -dur,
+      max: 0,
+      ticks: range(-10, 0, 2),
+      format: (v) => (v === 0 ? 'now' : `${v.toFixed(0)} s`),
+    },
+    y: { min: -m, max: m, ticks: [0], format: () => '0' },
+    lines: [{ xs, ys: est.unfiltered, style: 'main' }],
+    markers: [],
+    bands: [],
+    vlines: [],
+  };
+}
+
+function spread(a: Float64Array): number {
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (const v of a) {
+    if (v < lo) lo = v;
+    if (v > hi) hi = v;
+  }
+  return (hi - lo) * 100;
+}
+
+export function describeRgb(est: WindowEstimate | null, region: string): string {
+  if (!est) return `Colour channels (${region}): no complete 10 s window yet.`;
+  const f = (a: Float64Array) => spread(a).toFixed(2);
+  return (
+    `Colour channels (${region}), last 10 s, as % change from each channel's mean: ` +
+    `red varies over ${f(est.rgb.r)}%, green over ${f(est.rgb.g)}%, blue over ${f(est.rgb.b)}%.`
+  );
+}
+
+export function describeUnfiltered(est: WindowEstimate | null, region: string): string {
+  if (!est) return `Combined signal before filtering (${region}): no complete 10 s window yet.`;
+  return (
+    `Combined signal before filtering (${region}), last 10 s: the POS method's output, ` +
+    `${String(est.unfiltered.length)} samples at ${FS.toFixed(0)} Hz.`
+  );
+}
+
 export function waveformSpec(est: WindowEstimate): ChartSpec {
   const n = est.filtered.length;
   const dur = n / FS;
@@ -45,7 +126,11 @@ export function waveformSpec(est: WindowEstimate): ChartSpec {
   };
 }
 
-export function spectrumSpec(est: WindowEstimate): ChartSpec {
+/**
+ * `showBpm` is false when the region's quality is Poor: a pulse rate is shown only at
+ * Fair or better (PROJECT_SPEC 5.4), so the peak is then labelled in Hz only.
+ */
+export function spectrumSpec(est: WindowEstimate, showBpm = true): ChartSpec {
   const { freqs, power } = est.spectrum;
   const xs: number[] = [];
   const ys: number[] = [];
@@ -66,7 +151,7 @@ export function spectrumSpec(est: WindowEstimate): ChartSpec {
         x: est.peakHz,
         y: Math.max(...ys.filter((_, i) => Math.abs((xs[i] as number) - est.peakHz) < 0.05), 0),
         shape: 'triangle',
-        label: `${est.bpm.toFixed(0)} BPM`,
+        label: showBpm ? `${est.bpm.toFixed(0)} BPM` : `${est.peakHz.toFixed(2)} Hz`,
       },
     ],
     bands: [{ x0: BAND_LOW_HZ, x1: BAND_HIGH_HZ, label: 'pulse band' }],
@@ -91,20 +176,31 @@ export function filterSpec(): ChartSpec {
   };
 }
 
-export function describeWaveform(est: WindowEstimate | null, region: string): string {
+export function describeWaveform(
+  est: WindowEstimate | null,
+  region: string,
+  showBpm = true,
+): string {
   if (!est) return `Filtered pulse signal (${region}): no complete 10 s window yet.`;
   const beats = est.peaks.length;
   return (
     `Filtered pulse signal (${region}), last 10 s: ${beats.toFixed(0)} beats detected` +
-    (est.timeBpm === null ? '.' : `; their spacing gives about ${est.timeBpm.toFixed(0)} BPM.`)
+    (est.timeBpm === null || !showBpm
+      ? '.'
+      : `; their spacing gives about ${est.timeBpm.toFixed(0)} BPM.`)
   );
 }
 
-export function describeSpectrum(est: WindowEstimate | null, region: string): string {
+export function describeSpectrum(
+  est: WindowEstimate | null,
+  region: string,
+  showBpm = true,
+): string {
   if (!est) return `Spectrum (${region}): no complete 10 s window yet.`;
   return (
     `Spectrum (${region}): strongest peak in the 0.7-3.0 Hz band at ${est.peakHz.toFixed(2)} Hz ` +
-    `(${est.bpm.toFixed(0)} BPM); signal quality index ${est.sqi.toFixed(2)}.`
+    (showBpm ? `(${est.bpm.toFixed(0)} BPM); ` : '(quality too low to show a pulse rate); ') +
+    `signal quality index ${est.sqi.toFixed(2)}.`
   );
 }
 

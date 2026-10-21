@@ -101,3 +101,24 @@ export function regionRow(r: RegionReport, kept: boolean): RegionRow {
     kept,
   };
 }
+
+/** A region's pulse rate may be shown (quality at least Fair). */
+export function showsBpm(r: RegionReport | null): boolean {
+  return r !== null && r.bpm !== null && r.level !== null && r.level !== 'poor';
+}
+
+/** The Signal Lab's one-line summary for a region. */
+export function labSummary(r: RegionReport | null, kept: boolean): string {
+  if (!r) return 'No estimate yet: start the camera and wait 10 seconds.';
+  const row = regionRow(r, kept);
+  const est = r.estimate;
+  const show = showsBpm(r);
+  const parts = [`${row.label}: ${show ? `${row.bpm} BPM` : 'no pulse rate shown'}`];
+  if (show && est?.timeBpm != null)
+    parts.push(`about ${est.timeBpm.toFixed(0)} BPM from beat spacing`);
+  if (est) parts.push(`signal quality index ${est.sqi.toFixed(2)}`);
+  let text = `${parts.join(', ')}.`;
+  if (r.level) text += ` ${row.quality}.`;
+  if (row.reason) text += ` ${row.reason}${/[.!?]$/.test(row.reason) ? '' : '.'}`;
+  return text;
+}

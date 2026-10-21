@@ -59,7 +59,8 @@ function draw(canvas: HTMLCanvasElement, spec: ChartSpec): void {
   ctx.lineJoin = 'round';
   for (const l of g.lines) {
     ctx.strokeStyle = l.style === 'main' ? c('--color-accent') : c('--color-text-muted');
-    ctx.lineWidth = l.style === 'main' ? 2 : 1;
+    ctx.lineWidth = l.style === 'main' ? 2 : 1.25;
+    ctx.setLineDash(l.style === 'dashed' ? [6, 4] : l.style === 'dotted' ? [1.5, 3] : []);
     for (const seg of l.points) {
       ctx.beginPath();
       seg.forEach((p, i) => {
@@ -69,6 +70,7 @@ function draw(canvas: HTMLCanvasElement, spec: ChartSpec): void {
       ctx.stroke();
     }
   }
+  ctx.setLineDash([]);
 
   ctx.fillStyle = c('--color-text');
   ctx.textAlign = 'left';

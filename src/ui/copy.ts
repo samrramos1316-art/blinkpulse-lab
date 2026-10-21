@@ -170,3 +170,43 @@ export const INDICATOR_REASON_TEXT = {
   lowFps: 'the camera is below 24 frames per second. More light often helps.',
   tooFewBlinks: 'too few blinks in this window to measure their duration.',
 } as const;
+
+/** About dialog (PROJECT_SPEC 5.5). The disclaimer itself is in strings.ts. */
+export const ABOUT_COPY = {
+  methods: [
+    'Face tracking: MediaPipe Face Landmarker (a pre-trained model, run on this device) finds 478 points on the face in every video frame. Everything after that is written for this project.',
+    'Blinks: the eye aspect ratio compares the height of each eye with its width. A 10-second calibration finds your open-eye level, and a blink is timed from the moment the eye drops below 70% of that level until it rises above 80% again.',
+    'Pulse rate: the average colour of three skin regions (forehead and both cheeks) changes very slightly with each heartbeat. The POS method combines the colours, a band-pass filter keeps 42-180 beats per minute, and the strongest rhythm in a 10-second window gives the estimate. Regions with good signal are combined.',
+    'Eye-closure indicator: compares how much your eyes are closed, how often they close for half a second or more, and how long your blinks last with your own baseline from earlier in the same session.',
+  ],
+  limitations: [
+    'Accuracy on real people has not been measured yet; see docs/VALIDATION.md.',
+    'Head position, looking down, glasses, lighting, camera effects, and movement all change the measurements.',
+    'At 30 frames per second, blink durations are accurate to about one frame (33 ms).',
+    'The colour signal is stronger for some skin tones and lighting conditions than others, so the pulse rate may work worse for some people.',
+    'Measurements pause while this window is hidden or minimised.',
+  ],
+  parametersNote:
+    'These values are fixed so that results can be checked against the validation studies. They cannot be changed in the app.',
+  docs: 'Full details: docs/METHODS.md, docs/LIMITATIONS.md, docs/VALIDATION.md and docs/ETHICS_AND_PRIVACY.md in the project repository.',
+} as const;
+
+/** Captions for each processing step (PROJECT_SPEC 5.5 Signal Lab). */
+export const LAB_STEPS = {
+  rgb:
+    'The average red, green and blue of the skin region on every frame, resampled to an even ' +
+    '30 samples per second. Each line is shown as a change from its own average. The pulse ' +
+    'changes skin colour by well under 1%, so most of what you see here is lighting and movement.',
+  pos:
+    'POS ("plane orthogonal to skin") combines the three colours so that changes shared by all of ' +
+    'them, such as brightness, cancel out, and the small colour change of the pulse remains.',
+  filter:
+    'A band-pass filter keeps only rhythms between 0.7 and 3.0 per second (42-180 per minute). ' +
+    'It is run forwards and backwards, so the waveform is not delayed.',
+  waveform:
+    'The filtered signal. Triangles mark the beats found in it; their spacing gives a second, ' +
+    'independent estimate used as a cross-check.',
+  spectrum:
+    'How strong each rhythm is in the filtered signal. The strongest peak in the shaded band gives ' +
+    'the estimate; how much of the power sits in that peak gives the signal quality index.',
+} as const;

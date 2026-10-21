@@ -1,6 +1,7 @@
 # Ethics and privacy
 
-_Skeleton created in Phase 0. Completed in Phase 5._
+How the app handles data, the consent process for testing, and fairness. Updated in Phase 5
+(2026-10-20).
 
 ## Content-Security-Policy
 
@@ -91,3 +92,46 @@ Known gaps:
   real policy.
 - `frame-ancestors` cannot be set via `<meta>`; it must be sent as an HTTP header by the static
   host. To be configured at deploy time.
+
+## Data handling summary (Phase 5)
+
+| Data                              | Where it lives                  | Kept?                                    |
+| --------------------------------- | ------------------------------- | ---------------------------------------- |
+| Video frames                      | `<video>` element, canvas reads | Never stored; discarded each frame       |
+| Face landmarks                    | Memory, per frame               | Never stored or exported                 |
+| Skin-region colour averages       | Memory, last few seconds        | Exported only by "Record numeric trace"  |
+| Blink events, timeline, indicator | Memory, current session         | Exported only after a confirmation       |
+| Study session (`#study`)          | Memory                          | Exported only when the researcher clicks |
+| Theme and "setup completed" flag  | `localStorage`                  | Yes (no measurements)                    |
+
+- **Privacy checks in Phase 5** (headless Chrome, production build, synthetic face): no request to
+  any other host during first-run setup, measuring, the Signal Lab, the About dialog, theme changes,
+  and screen-size changes. The CSP test (`test/csp.test.ts`) keeps the policy as listed above. The
+  About dialog's links to the docs are plain text, so the app never navigates away by itself.
+- **Screenshots** in `docs/screenshots/` show only a synthetic face rendered from MediaPipe's
+  canonical face model, never a real person.
+
+## Consent process for testing
+
+- Until the study protocol is frozen, the author tests the app only on themselves (gate G-B).
+- Validation recordings (V1, V2b) and study sessions need informed consent, and for anyone under 18
+  a signed parent or guardian permission form plus their own assent (`docs/forms/`). The right to
+  stop at any time, without a reason, is stated on every form.
+- Recordings for V1 stay on the recording device, are never committed or shared, and are deleted
+  when labelling is finished or when the participant asks.
+- Study files hold a participant code only; the list linking codes to names is kept on paper or in
+  a separate file outside the repository and destroyed when the study ends.
+
+## Fairness
+
+- The pulse signal comes from small colour changes in the skin. They are weaker for darker skin
+  tones and in poor light, so the pulse rate can be less available or less accurate for some
+  people. The app shows "-" with a reason rather than a guess, and V2 must report results per
+  participant and per lighting condition, and say plainly where it works poorly.
+- Blink measurements depend on the face landmark model and on eye shape, eyelid anatomy, eye
+  conditions, glasses, and makeup. The app never calls anyone's blinking abnormal, and V1 reports
+  results per condition (including glasses).
+- The eye-closure indicator compares each person only with themselves. It is not a judgement of a
+  person and is not shown to study participants during a session.
+- The validation samples will be small and may not be varied; the results must say who was and
+  was not represented, without identifying anyone.

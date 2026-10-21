@@ -16,3 +16,6 @@ public/wasm/*
 
 # Self-signed dev certificate and private key (tools/make-dev-cert.mjs)
 .cert/
+
+# Python bytecode
+__pycache__/

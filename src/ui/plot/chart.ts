@@ -5,6 +5,9 @@
 
 import type { PlotPoint, PlotRect } from './earPlotModel.ts';
 
+/** main: thick accent; muted: thin solid; dashed: thin dashed; dotted: thin dotted. */
+export type LineStyle = 'main' | 'muted' | 'dashed' | 'dotted';
+
 export interface AxisSpec {
   min: number;
   max: number;
@@ -15,8 +18,8 @@ export interface AxisSpec {
 export interface ChartSpec {
   x: AxisSpec;
   y: AxisSpec;
-  /** Line series; NaN values break the line. */
-  lines: { xs: ArrayLike<number>; ys: ArrayLike<number>; style: 'main' | 'muted' }[];
+  /** Line series; NaN values break the line. Styles differ in width and dash, not only colour. */
+  lines: { xs: ArrayLike<number>; ys: ArrayLike<number>; style: LineStyle }[];
   /** Point markers (shape distinguishes them, not colour alone). */
   markers: { x: number; y: number; shape: 'circle' | 'triangle'; label?: string }[];
   /** Shaded x ranges (e.g. the pass band). */
@@ -26,7 +29,7 @@ export interface ChartSpec {
 }
 
 export interface ChartGeometry {
-  lines: { points: PlotPoint[][]; style: 'main' | 'muted' }[];
+  lines: { points: PlotPoint[][]; style: LineStyle }[];
   markers: (PlotPoint & { shape: 'circle' | 'triangle'; label?: string })[];
   bands: { x0: number; x1: number; label?: string }[];
   vlines: { x: number; label: string }[];

@@ -4,11 +4,18 @@ An experimental, fully on-device signal-processing project that estimates **blin
 **pulse rate** from webcam video, with every key algorithm (FFT, filters, resampling, peak
 detection, plots) written by hand and validated against reference data.
 
-> **Status: Phase 4 (pulse rate) built; validations V1 and V2 pending.** The app tracks face
+> **Status: all features built (Phases 0-5); no validation run yet.** The app tracks face
 > landmarks on the device and shows blink rate, eye-closed fraction, a per-minute blink timeline,
-> and an estimated pulse rate from three skin regions with a quality level. None of these has been
-> validated on real people yet; the numbers so far come from synthetic signals (see
-> `docs/METHODS.md`). See `PROJECT_SPEC.md` Section 2 for the phase plan.
+> an estimated pulse rate from three skin regions with a quality level, an experimental eye-closure
+> indicator, a Signal Lab, and a study mode with its analysis script. None of these has been
+> validated on real people yet: validations V1 (blinks), V2 (pulse), and V3 (the indicator study)
+> need recordings, a reference device, and participants. The numbers so far come from synthetic
+> signals (see `docs/METHODS.md`).
+
+![Main view, light theme, with a synthetic face as the camera](docs/screenshots/main-1280-light.png)
+
+_Screenshots use a synthetic face rendered from MediaPipe's canonical face model, never a real
+person. More in `docs/screenshots/` (360, 768, and 1280 px; light and dark; Signal Lab; About)._
 
 ## Disclaimer
 
@@ -52,6 +59,11 @@ app asks the phone to keep the screen on (Screen Wake Lock), because a locked sc
 camera. Phone cameras and processors vary; check the measured frame rate under "Timing details"
 (the indicator and blink timing need at least 24 fps).
 
+**Signal Lab** (header button): the five steps of the pulse estimate for one skin region, live:
+the raw colour channels, the POS output, the band-pass filter, the filtered waveform with beats,
+and the spectrum, each with a short caption. **About** (header button): the disclaimer, a methods
+summary, limitations, and the fixed processing parameters.
+
 Developer pages: `#explorer` (Landmark Explorer, to check landmark indices on live video),
 `#v1` (validation V1: analyse a local recording, hand-label blinks, score), and `#v2` (validation
 V2a: pulse trace from a local video file).
@@ -67,6 +79,16 @@ visible during a session; the app pauses measuring while it is hidden.
 Third-party runtime: MediaPipe tasks-vision 1.1.1 and its face landmarker model, both self-hosted.
 The library has a built-in usage logger that the CSP blocks (see `docs/ETHICS_AND_PRIVACY.md`).
 
+## Study analysis (Python, optional)
+
+`tools/analyze_v3.py` runs the pre-registered analysis (`docs/STUDY_PROTOCOL.md` Sections 7-9) on
+the study-mode CSV files. Set up the Python environment as below, then:
+
+```sh
+.venv/Scripts/python tools/analyze_v3.py data/ --dev P01 --out v3-report.md
+.venv/Scripts/python -m unittest tools/test_analyze_v3.py
+```
+
 ## Regenerating test fixtures (optional)
 
 The SciPy/NumPy reference fixtures in `test/fixtures/` are committed. To regenerate them
@@ -80,14 +102,20 @@ python -m venv .venv
 
 ## Results
 
-None yet. Accuracy numbers will be reported in `docs/VALIDATION.md` with sample sizes once the
-validation runs (V1, V2, V3) have been done.
+None yet. Accuracy numbers will be reported in `docs/VALIDATION.md` with sample sizes, including
+null and negative results, once the validation runs (V1, V2, V3) have been done. Until then, read
+`docs/LIMITATIONS.md` before trusting any number the app shows.
 
 ## Project documents
 
 - `PROJECT_SPEC.md`: source of truth, amended by `SPEC_AMENDMENT_01.md` and `SPEC_AMENDMENT_02.md`
 - `CLAUDE.md`: working rules for AI-assisted development
-- `docs/`: methods, validation, limitations, ethics and privacy (filled in as phases complete)
+- `docs/METHODS.md`: equations, pipeline diagram, parameters, tests and browser checks
+- `docs/VALIDATION.md`: validation procedures (V1, V2, V3) and, later, their results
+- `docs/LIMITATIONS.md`, `docs/ETHICS_AND_PRIVACY.md`
+- `docs/STUDY_PROTOCOL.md` (draft, not frozen) and `docs/forms/` (consent and assent drafts)
+- `docs/DEMO_SCRIPT.md`: script for a 60-90 second demo video
+- `docs/PHASE_NOTES.md`: what was verified, what was not, and deviations, per phase
 
 ## AI assistance
 
@@ -102,6 +130,10 @@ explain, every algorithm.
   AI-assisted.
 - Phase 3b (per-minute session timeline, plots, export, tests): AI-assisted.
 - Phase 4 (rPPG pulse pipeline, fusion, quality, plots, trace recording, eval CLI, tests):
+  AI-assisted.
+- Phase 4B (study protocol draft and forms, eye-closure indicator, study mode, reaction-time task,
+  analysis script, tests): AI-assisted. The protocol's decisions are the author's to make.
+- Phase 5 (Signal Lab, About dialog, accessibility and privacy checks, docs, demo script):
   AI-assisted.
 
 ## License

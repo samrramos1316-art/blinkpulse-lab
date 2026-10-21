@@ -12,7 +12,7 @@ import {
   spectrumSpec,
   waveformSpec,
 } from '../plot/pulsePlots.ts';
-import { regionRow } from '../pulseDisplay.ts';
+import { regionRow, showsBpm } from '../pulseDisplay.ts';
 import { Chart } from './Chart.tsx';
 
 const FILTER_SPEC = filterSpec();
@@ -38,6 +38,7 @@ export function PulsePanel({
   const [region, setRegion] = useState<RegionId>('forehead');
   const report = pulse?.regions.find((r) => r.id === region) ?? null;
   const est = report?.estimate ?? null;
+  const show = showsBpm(report);
   const label = REGION_LABEL[region];
   const kept = new Set(pulse?.fusion?.kept ?? []);
   const version = pulse ? `${String(pulse.tMs)}-${region}` : region;
@@ -115,13 +116,13 @@ export function PulsePanel({
         <Chart
           title={`Filtered pulse signal (${label})`}
           spec={est ? waveformSpec(est) : null}
-          description={describeWaveform(est, label)}
+          description={describeWaveform(est, label, show)}
           version={version}
         />
         <Chart
           title={`Spectrum (${label})`}
-          spec={est ? spectrumSpec(est) : null}
-          description={describeSpectrum(est, label)}
+          spec={est ? spectrumSpec(est, show) : null}
+          description={describeSpectrum(est, label, show)}
           version={version}
         />
         <Chart

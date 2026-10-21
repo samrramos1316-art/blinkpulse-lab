@@ -1,6 +1,7 @@
 # Limitations
 
-_Skeleton created in Phase 0. This file is filled in as the relevant phases and validation runs are completed. It must not contain numbers that do not come from a test or validation run._
+PROJECT_SPEC Section 9, expanded per feature. No numbers here except from tests or validation
+runs, with their sample sizes.
 
 ## Capture and timing (Phase 2)
 
@@ -55,3 +56,55 @@ _Skeleton created in Phase 0. This file is filled in as the relevant phases and 
   quality. The shown value is a median of recent estimates and lags real changes by several
   seconds.
 - Below 20 fps the quality is lowered; below 15 fps there is no estimate.
+
+## Eye-closure indicator (Phase 4B)
+
+- It has not been validated: whether it follows sleepiness at all is what study V3 tests, and a
+  null result is a likely outcome (`docs/STUDY_PROTOCOL.md` Section 1).
+- Eye closure changes with much more than sleepiness: concentration (fewer blinks), the kind of
+  task (reading versus a video call), looking down at a keyboard or phone, dry eyes, contact
+  lenses, glare on glasses, screen brightness, and a person's usual habits at that time of day.
+- It compares a person only with their own baseline from the same session. A baseline recorded
+  while already sleepy makes later values look normal.
+- EAR is not a direct measure of how far the eyelid covers the eye, so the "eye-closed fraction"
+  only approximates the classic PERCLOS definition.
+- The bands are provisional and not validated; final bands, if any, will come from a small
+  development subset of one person's sessions.
+- Even if the study finds an association, it will come from a small study (about 6-10 people) and
+  may not hold for other people, ages, cameras, or lighting.
+
+## Study mode and the analysis (Phase 4B)
+
+- The reaction-time task runs in a browser: display latency, keyboard or touch latency, and
+  frame timing add tens of milliseconds that differ between devices. Only changes within the same
+  person on the same device mean anything.
+- The sleepiness rating is a self-rating, and being asked every 5 minutes can itself change how
+  sleepy people feel and how they behave. The rating wording is a placeholder until permission
+  to use the KSS wording is granted.
+- Measuring pauses while the app's window is hidden, so participants must work in a window beside
+  it rather than over it.
+- With so few participants, the statistical tests have little power: a non-significant result does
+  not show that there is no association.
+
+## Pulse and heart-rate variability
+
+- Webcam heart-rate variability (HRV) is not reliable: at 30 fps a frame is about 33 ms long,
+  which is the same size as the beat-to-beat changes HRV measures, and noise moves the detected
+  beats further. HRV is therefore not shown in the app (PROJECT_SPEC 7.4).
+- The pulse colour signal is weaker for darker skin tones and in poor lighting, so the pulse rate
+  may work worse for some people. How much worse is unknown until V2 reports results per
+  condition and per participant.
+
+## Face tracking
+
+- The MediaPipe face landmark model is pre-trained by Google; only what happens after the
+  landmarks (geometry, signal processing, statistics) was written for this project. Its accuracy
+  may differ across faces, ages, and conditions, and that has not been measured here.
+- Differences in facial anatomy, eye conditions (for example a drooping eyelid), and glasses can
+  make the blink measurements unreliable for some people. The app shows "not available" rather
+  than guessing and never judges anyone's blinking as normal or abnormal.
+
+## Signal Lab
+
+- The plots show the last 10 s window as the app computed it; they are explanations, not separate
+  measurements. With live data they have so far only been seen on a synthetic face (Phase 4).

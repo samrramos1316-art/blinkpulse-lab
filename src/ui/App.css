@@ -1577,3 +1577,87 @@
   font-size: clamp(1.5rem, 6vw, 2.5rem);
   color: var(--color-text-muted);
 }
+
+/* Signal Lab (Phase 5): each processing step with its caption. */
+.lab {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-5);
+}
+
+.lab__summary {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.lab__steps {
+  display: grid;
+  gap: var(--space-5) var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lab__step {
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+  min-width: 0;
+}
+
+.lab__caption {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--line-normal);
+}
+
+/* About dialog. */
+.about {
+  width: min(100% - 2 * var(--gutter), 720px);
+  max-height: min(100% - 2 * var(--gutter), 90vh);
+  padding: var(--space-5);
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-2);
+}
+
+.about::backdrop {
+  background: var(--color-backdrop);
+}
+
+.about__disclaimer {
+  font-size: var(--text-sm);
+}
+
+.about__heading {
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+}
+
+.about__list {
+  margin: 0;
+  padding-left: var(--space-5);
+  font-size: var(--text-sm);
+  line-height: var(--line-normal);
+}
+
+.about__list li + li {
+  margin-top: var(--space-2);
+}
+
+.about__table {
+  width: 100%;
+  margin-bottom: var(--space-3);
+}
+
+.about__table th {
+  width: 45%;
+  font-weight: var(--weight-medium);
+  text-align: left;
+}

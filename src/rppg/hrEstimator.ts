@@ -58,6 +58,13 @@ export interface WindowEstimate {
   timeBpm: number | null;
   /** |bpm - timeBpm| <= CROSS_CHECK_BPM; null when timeBpm is null. */
   crossCheckAgrees: boolean | null;
+  /**
+   * The resampled colour channels at FS, each as a fraction of its window mean
+   * minus 1 (for the Signal Lab; 0.01 = 1% above the mean).
+   */
+  rgb: { r: Float64Array; g: Float64Array; b: Float64Array };
+  /** The signal before the band-pass: POS output (or the green/raw comparison). */
+  unfiltered: Float64Array;
   /** Band-passed pulse signal at FS (for the waveform plot). */
   filtered: Float64Array;
   /** Indices of the time-domain peaks in `filtered`. */
@@ -107,6 +114,14 @@ export function sqi(spectrum: PowerSpectrum, peakHz: number): number {
   return Math.min(1, (fund + harm) / total);
 }
 
+/** x / mean(x) - 1. */
+function relative(x: Float64Array): Float64Array {
+  let m = 0;
+  for (const v of x) m += v;
+  m /= x.length;
+  return x.map((v) => (m === 0 ? 0 : v / m - 1));
+}
+
 export function estimateWindow(w: TraceWindow, options: EstimateOptions = {}): WindowResult {
   const n = w.tMs.length;
   const span = n >= 2 ? (w.tMs[n - 1] as number) - (w.tMs[0] as number) : 0;
@@ -147,6 +162,8 @@ export function estimateWindow(w: TraceWindow, options: EstimateOptions = {}): W
     sqi: sqi(spectrum, peak.freqHz),
     timeBpm,
     crossCheckAgrees: timeBpm === null ? null : Math.abs(timeBpm - bpm) <= CROSS_CHECK_BPM,
+    rgb: { r: relative(u.r), g: relative(u.g), b: relative(u.b) },
+    unfiltered: signal,
     filtered,
     peaks,
     spectrum,

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { FusionResult } from '../rppg/fusion.ts';
 import type { PulseUpdate, RegionReport } from '../rppg/pulseEstimator.ts';
 import { PULSE_COPY, PULSE_FLAG_TEXT } from './copy.ts';
-import { mainFlagText, pulseCard, regionRow } from './pulseDisplay.ts';
+import { labSummary, mainFlagText, pulseCard, regionRow } from './pulseDisplay.ts';
 
 const fusion = (over: Partial<FusionResult> = {}): FusionResult => ({
   bpm: 71.6,
@@ -101,6 +101,19 @@ describe('region rows and flag text', () => {
     });
     expect(regionRow(report({ bpm: null, level: null, failure: 'gap' }), false).reason).toBe(
       'Interrupted in the last 10 s',
+    );
+  });
+
+  it('Signal Lab summary: a rate only at Fair or better, no stray dashes', () => {
+    expect(labSummary(null, false)).toBe('No estimate yet: start the camera and wait 10 seconds.');
+    expect(labSummary(report({}), true)).toBe('Forehead: 70 BPM. Quality: Good. Used.');
+    const poor = labSummary(report({ level: 'poor', flags: ['dark'] }), false);
+    expect(poor).toBe(
+      `Forehead: no pulse rate shown. Quality: Poor. ${PULSE_FLAG_TEXT.dark}.`.replace('..', '.'),
+    );
+    expect(poor).not.toContain('70');
+    expect(labSummary(report({ bpm: null, level: null, failure: 'gap' }), false)).toBe(
+      'Forehead: no pulse rate shown. Interrupted in the last 10 s.',
     );
   });
 

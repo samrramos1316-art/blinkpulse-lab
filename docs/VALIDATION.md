@@ -1,6 +1,7 @@
 # Validation
 
-_Skeleton created in Phase 0. No content yet: this file is filled in as the relevant phases and validation runs are completed. It must not contain numbers that do not come from a test or validation run._
+This file holds validation results only from real runs, with sample sizes, including null and
+negative findings. **No validation has been run yet**; the procedures below are ready.
 
 ## V1: Blink detection (PROJECT_SPEC 7.2)
 
@@ -52,3 +53,39 @@ with that log. Report per condition and per participant, including failures, wit
 plot.
 
 Results: none yet.
+
+## V3: Does the eye-closure indicator track sleepiness? (PROJECT_SPEC 7.5)
+
+**Status: not run.** The study protocol (`docs/STUDY_PROTOCOL.md`) is a draft and not frozen;
+open decisions D1-D18, the KSS permission (D2), and any review-board answer must be settled first,
+and the frozen protocol must be committed before the first participant session (gate G-B).
+
+Procedure once the protocol is frozen:
+
+1. Run each session in study mode (`#study`) and export its CSV. Keep the files outside the
+   repository (they are participant data); only aggregated results go into this file.
+2. Development subset (the author's own pilot sessions, Section 7): apply the band rule and commit
+   the final bands before analysing anyone else:
+
+   ```sh
+   .venv/Scripts/python tools/analyze_v3.py data/ --dev P01 --bands
+   ```
+
+3. Held-out analysis (every other participant):
+
+   ```sh
+   .venv/Scripts/python tools/analyze_v3.py data/ --dev P01 --out v3-report.md
+   ```
+
+4. Copy the report's tables here: n recruited, consented, excluded (with reasons), withdrawn
+   (counted by hand; the files of withdrawn participants are deleted), and analysed; per-participant
+   rho with intervals; the Wilcoxon result; both controls; H2; the sensitivity analyses; the
+   exploratory AUC. Report null and negative results in the same detail.
+
+Results: none yet.
+
+## Phase 5 checks (not validation)
+
+The browser checks of the Signal Lab, About dialog, keyboard use, reduced motion, and screen
+widths are described in `docs/METHODS.md` ("Signal Lab, About, and the Phase 5 checks"). They
+check that the app works, not how accurate it is.
