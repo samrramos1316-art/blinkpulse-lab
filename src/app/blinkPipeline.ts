@@ -12,7 +12,12 @@ import { calibrate, type BlinkThresholds, type CalibrationResult } from '../blin
 import { earBothEyes, type EyeIndices, type Point } from '../blink/ear.ts';
 import { BlinkMetrics, type BlinkMetricsSnapshot } from '../blink/metrics.ts';
 import { SessionSummary, type MinuteBin } from '../blink/sessionSummary.ts';
-import { EyeClosureTracker, type BaselineState, type TrendPoint } from '../blink/sleepiness.ts';
+import {
+  EyeClosureTracker,
+  type BaselineState,
+  type EciResult,
+  type TrendPoint,
+} from '../blink/sleepiness.ts';
 import type { FrameTick } from '../capture/frameClock.ts';
 import { median } from '../dsp/stats.ts';
 import { poseWithinLimits, relativePose, type HeadPose } from '../vision/headPose.ts';
@@ -231,6 +236,21 @@ export class BlinkPipeline {
 
   cancelBaseline(): void {
     this.eyeClosure.cancelBaseline();
+  }
+
+  /** The eye-closure window of `windowMs` ending at `endMs` (study analysis windows). */
+  evaluateEyeClosure(windowMs: number, endMs: number): EciResult {
+    return this.eyeClosure.evaluate(windowMs, endMs);
+  }
+
+  /** Alert-baseline state, read every tick by study mode. */
+  get eyeClosureBaseline(): BaselineState {
+    return this.eyeClosure.baseline;
+  }
+
+  /** Time of the latest frame given to the eye-closure tracker, or NaN. */
+  get latestEyeClosureMs(): number {
+    return this.eyeClosure.latestSampleMs;
   }
 
   /** New camera session: keep the calibration and a finished baseline, forget the rest. */

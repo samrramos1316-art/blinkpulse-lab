@@ -1,4 +1,5 @@
 /// <reference types="vitest/config" />
+import { execSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import react from '@vitejs/plugin-react';
 import { defineConfig, type Plugin } from 'vite';
@@ -46,9 +47,21 @@ function phoneHttps(mode: string) {
   };
 }
 
+/** Commit the app is built from, for study exports; "unknown" outside a git checkout. */
+function gitCommit(): string {
+  try {
+    const hash = execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
+    const dirty = execSync('git status --porcelain', { encoding: 'utf8' }).trim() !== '';
+    return dirty ? `${hash}-modified` : hash;
+  } catch {
+    return 'unknown';
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
   plugins: [react(), cspMetaTag()],
+  define: { __APP_COMMIT__: JSON.stringify(gitCommit()) },
   server: {
     headers: { 'Content-Security-Policy': buildCsp(DEV_CSP_DIRECTIVES) },
     ...phoneHttps(mode),

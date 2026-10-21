@@ -10,6 +10,8 @@ const fail = (reason: Extract<EciResult, { ok: false }>['reason']): EciResult =>
   tMs: 0,
   reason,
   coverage: 0.4,
+  lost: { noFace: 0, headTurned: 0, gap: 0 },
+  medianFps: 30,
 });
 
 const value = (eci: number): EciResult => ({
@@ -20,6 +22,8 @@ const value = (eci: number): EciResult => ({
   factors: { closedFraction: 0.04, longPerMin: 0, meanBlinkMs: 150, blinksPerMin: 15 },
   ratios: { closedFraction: 1, longClosures: 1, blinkDuration: 1, blinkRate: 1 },
   coverage: 0.95,
+  lost: { noFace: 0, headTurned: 0, gap: 0 },
+  medianFps: 30,
 });
 
 const point = (long: EciResult): TrendPoint => ({ tMs: 0, short: long, long });

@@ -49,6 +49,13 @@ The production build injects a CSP `<meta>` tag (`csp.ts`, `vite.config.ts`). Cu
   sets. Kept in memory (30 min cap) and saved by the browser as CSV when the user stops.
 - The session timeline is kept in memory only and cleared on the next Start. Its CSV export
   needs two clicks; the confirmation lists what the file contains (per-minute numbers only).
+- Study mode (`#study`, 2026-10-19): the participant is identified only by a code that must match
+  `P` plus 2-3 digits, so a name cannot be typed in. The session is kept in memory and saved only
+  when the researcher presses Export: one CSV of numbers and short codes (calibration and baseline
+  values, eye-closure windows, blink event times and durations, ratings, reaction-time trials). A
+  test checks that every cell is a number or a short code. "New session" reloads the page, which
+  clears everything. The researcher confirms that signed forms are on file; the app stores no
+  names, forms, or contact details.
 
 ## MediaPipe usage logger (found 2026-10-17)
 

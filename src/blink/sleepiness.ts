@@ -41,9 +41,14 @@ export const EVAL_HOP_MS = 10_000;
 export const PROVISIONAL_BANDS = { somewhatAbove: 1.5, wellAbove: 2.5 } as const;
 /** Longest closure that still counts as a blink for D (detector's 'blink' kind). */
 const LONG_CLOSURE_MIN_MS = 500;
+/**
+ * Events are kept this long past the 5-minute window, so a window ending a few
+ * seconds ago can still be evaluated (study analysis windows).
+ */
+const EVENT_MARGIN_MS = 60_000;
 /** Trend history kept (8 h of 10 s points). */
 const MAX_TREND = 2880;
-/** Ring capacity: more than 5 min of intervals at 60 fps. */
+/** Ring capacity: more than 5 min + EVENT_MARGIN_MS of intervals at 60 fps. */
 const CAPACITY = 24_000;
 
 export type Band = 'near' | 'somewhatAbove' | 'wellAbove';
@@ -75,17 +80,30 @@ export interface EciRatios {
   blinkRate: number;
 }
 
+/** Time lost in a window, by reason (ms). */
+export interface LostTime {
+  noFace: number;
+  headTurned: number;
+  gap: number;
+}
+
+interface WindowQuality {
+  coverage: number;
+  lost: LostTime;
+  /** Median frame rate over the window's non-gap intervals, or null. */
+  medianFps: number | null;
+}
+
 export type EciResult =
-  | {
+  | ({
       ok: true;
       tMs: number;
       eci: number;
       band: Band;
       factors: EyeClosureFactors;
       ratios: EciRatios;
-      coverage: number;
-    }
-  | { ok: false; tMs: number; reason: EciReason; coverage: number };
+    } & WindowQuality)
+  | ({ ok: false; tMs: number; reason: EciReason } & WindowQuality);
 
 export interface BaselineValues extends EyeClosureFactors {
   validMs: number;
@@ -258,7 +276,7 @@ export class EyeClosureTracker {
     } else {
       this.stepBaseline(s.tMs, 0, Code.Gap);
     }
-    const lo = s.tMs - LONG_WINDOW_MS;
+    const lo = s.tMs - LONG_WINDOW_MS - EVENT_MARGIN_MS;
     if ((this.events[0]?.startMs ?? Infinity) <= lo)
       this.events = this.events.filter((e) => e.startMs > lo);
 
@@ -282,18 +300,31 @@ export class EyeClosureTracker {
     if (b.phase === 'running' && e.startMs >= b.startedMs) addEventTo(this.baselineTally, e);
   }
 
-  /** The trailing window ending at `nowMs` (normally the latest sample). */
+  /** Time of the latest sample, or NaN before the first. */
+  get latestSampleMs(): number {
+    return this.prev?.tMs ?? NaN;
+  }
+
+  /**
+   * The trailing window ending at `nowMs`: normally the latest sample, or up to
+   * EVENT_MARGIN_MS earlier (an analysis window evaluated a few seconds late).
+   */
   evaluate(windowMs: number, nowMs: number): EciResult {
     const lo = nowMs - windowMs;
-    const fail = (reason: EciReason, coverage: number): EciResult => ({
+    const none: WindowQuality = {
+      coverage: 0,
+      lost: { noFace: 0, headTurned: 0, gap: 0 },
+      medianFps: null,
+    };
+    const fail = (reason: EciReason, q: WindowQuality): EciResult => ({
       ok: false,
       tMs: nowMs,
       reason,
-      coverage,
+      ...q,
     });
-    if (Number.isNaN(this.closedEar)) return fail('noCalibration', 0);
+    if (Number.isNaN(this.closedEar)) return fail('noCalibration', none);
     const b = this.baselineState;
-    if (b.phase !== 'done') return fail('noBaseline', 0);
+    if (b.phase !== 'done') return fail('noBaseline', none);
 
     const t = emptyTally();
     const lost = { noFace: 0, headTurned: 0, gap: 0 };
@@ -314,6 +345,11 @@ export class EyeClosureTracker {
       else lost.gap += dt;
     }
     const coverage = Math.min(1, t.validMs / windowMs);
+    const q: WindowQuality = {
+      coverage,
+      lost,
+      medianFps: dts.length ? 1000 / median(dts) : null,
+    };
     if (coverage < MIN_COVERAGE) {
       const unrecorded = Number.isNaN(this.firstMs) ? windowMs : Math.max(0, this.firstMs - lo);
       const candidates: [EciReason, number][] = [
@@ -324,15 +360,15 @@ export class EyeClosureTracker {
       ];
       let best = candidates[0] as [EciReason, number];
       for (const c of candidates) if (c[1] > best[1]) best = c;
-      return fail(best[0], coverage);
+      return fail(best[0], q);
     }
-    if (dts.length === 0 || 1000 / median(dts) < LOW_FPS) return fail('lowFps', coverage);
+    if (q.medianFps === null || q.medianFps < LOW_FPS) return fail('lowFps', q);
     for (const e of this.events) if (e.startMs > lo && e.startMs <= nowMs) addEventTo(t, e);
-    if (t.blinkMs.length < MIN_WINDOW_BLINKS) return fail('tooFewBlinks', coverage);
+    if (t.blinkMs.length < MIN_WINDOW_BLINKS) return fail('tooFewBlinks', q);
 
     const factors = factorsOf(t);
     const { eci, ratios } = eciFromFactors(factors, b.values);
-    return { ok: true, tMs: nowMs, eci, band: bandOf(eci), factors, ratios, coverage };
+    return { ok: true, tMs: nowMs, eci, band: bandOf(eci), factors, ratios, ...q };
   }
 
   private classify(p: EyeClosureSample, s: EyeClosureSample, dt: number): Code {

@@ -222,6 +222,31 @@ describe('Eye-Closure Index on synthetic sequences', () => {
     expect(values[values.length - 1] as number).toBeGreaterThan((values[0] as number) + 0.5);
   });
 
+  it('a window evaluated 30 s late gives the same result as on time (study windows)', () => {
+    const tr = withBaseline();
+    const seg = { everyMs: 4000, blinkMs: 300, longEveryMs: 60_000, longMs: 800 };
+    const end = BASE_END + LONG_WINDOW_MS;
+    run(tr, { fromMs: BASE_END, toMs: end, ...seg });
+    const onTime = tr.evaluate(LONG_WINDOW_MS, end - 1);
+    run(tr, { fromMs: end, toMs: end + 30_000, everyMs: 2000, blinkMs: 150 });
+    expect(tr.evaluate(LONG_WINDOW_MS, end - 1)).toEqual(onTime);
+  });
+
+  it('reports lost time by reason and the median frame rate', () => {
+    const tr = withBaseline();
+    run(tr, {
+      fromMs: BASE_END,
+      toMs: BASE_END + SHORT_WINDOW_MS,
+      everyMs: 4000,
+      blinkMs: 150,
+      invalid: (t) => (t - BASE_END < 6000 ? 'noFace' : null),
+    });
+    const r = tr.evaluate(SHORT_WINDOW_MS, BASE_END + SHORT_WINDOW_MS - 1);
+    expect(r.lost.noFace).toBeCloseTo(6000, -2);
+    expect(r.lost.headTurned).toBe(0);
+    expect(r.medianFps).toBeCloseTo(30, 6);
+  });
+
   it('evaluates both windows every 10 s once the baseline is done', () => {
     const tr = withBaseline();
     const before = tr.trend.length;

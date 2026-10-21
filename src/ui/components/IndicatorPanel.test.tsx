@@ -16,8 +16,17 @@ const ok: EciResult = {
   factors: { closedFraction: 0.05, longPerMin: 0.4, meanBlinkMs: 160, blinksPerMin: 12 },
   ratios: { closedFraction: 1.25, longClosures: 1, blinkDuration: 1.07, blinkRate: 0.8 },
   coverage: 0.9,
+  lost: { noFace: 0, headTurned: 0, gap: 0 },
+  medianFps: 30,
 };
-const gap: EciResult = { ok: false, tMs: 0, reason: 'gap', coverage: 0.3 };
+const gap: EciResult = {
+  ok: false,
+  tMs: 0,
+  reason: 'gap',
+  coverage: 0.3,
+  lost: { noFace: 0, headTurned: 0, gap: 0 },
+  medianFps: 30,
+};
 
 const done: IndicatorSnapshot = {
   baseline: {

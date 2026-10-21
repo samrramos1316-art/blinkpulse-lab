@@ -383,3 +383,35 @@ is not built.
   over https on the LAN address, with a portrait synthetic face as the camera: secure context,
   face tracking at 30 fps, pulse 72 BPM with Good quality, no horizontal scrolling, no errors.
 - Not checked: a real phone (camera, speed, wake lock, certificate prompt), iOS Safari.
+
+## Phase 4B: Study mode (2026-10-19)
+
+**Status: built, not committed. Not used with any participant (the protocol is a draft).**
+
+- `src/study/pvt.ts` (PVT-B), `session.ts` (step runner), `studyCsv.ts` (export), all pure;
+  `src/app/useStudy.ts`; `src/ui/study/` (`#study` route: setup form, calibration with preview,
+  rating panel and corner prompt, PVT-B box, work clock, finish/export, review). The blink pipeline
+  gained an event listener, evaluation of a past window, and per-window lost time and frame rate.
+  The build stamps the git commit into exports.
+- Verified: `npm run check` (48 files, 516 tests; 49 new). Two headless browser runs with a
+  synthetic blinking face (details and numbers in METHODS, "Study mode"): one complete 34.5-minute
+  session and one stopped after the first PVT-B, both exported and inspected.
+- Not verified: a real person, a real display and keyboard for PVT-B timing, a touch screen for
+  the PVT-B tap, a screen reader, Firefox/Safari. The analysis script in `tools/` (Phase 4B
+  deliverable) is not written yet. Phase 3 and 4 acceptance (V1, V2, pulse-region check) are
+  still open.
+
+**Deviations and decisions** (D9-D13 added to the protocol's open decisions)
+
+- Rating wording is a placeholder ("1: not sleepy at all" ... "9: extremely sleepy"), not the KSS
+  text, until permission (D2); exports say `rating_wording=placeholder`.
+- D9: a false start with nothing showing restarts the 1-4 s interval. D10: a stimulus still
+  showing at 3:00 is not scored. D11: windows are evaluated 5 s after they end.
+- D12: the app pauses measuring while its window is hidden, so the participant must work in a
+  window placed beside it. The protocol and forms should say so.
+- D13 (conflict): protocol Section 11 says the app reminds participants not to drive, but
+  CLAUDE.md allows driving to be mentioned only in the disclaimer. The app tells the researcher
+  to remind the participant of the safety note on the signed form instead.
+- Draft decision D5 is implemented as drafted (preview, blink cards, and EAR plot hidden too).
+- "New session" reloads the page, so each session gets a fresh calibration and baseline.
+- Study mode has no link from the main app; it is reached at `#study` (README).

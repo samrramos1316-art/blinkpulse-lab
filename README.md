@@ -56,6 +56,14 @@ Developer pages: `#explorer` (Landmark Explorer, to check landmark indices on li
 `#v1` (validation V1: analyse a local recording, hand-label blinks, score), and `#v2` (validation
 V2a: pulse trace from a local video file).
 
+Study mode: `#study` runs one session of the sleepiness study (`docs/STUDY_PROTOCOL.md`):
+researcher setup with a participant code, blink calibration, a 1-9 rating, the 3-minute alert
+baseline, a 3-minute reaction-time task, 25 minutes of the participant's own work with a rating
+every 5 minutes, the reaction-time task again, then a numbers-only CSV export. The indicator and
+the live measurements stay hidden until after the export. **The protocol is a draft and the rating
+wording is a placeholder: use study mode only to test it on yourself.** Keep the app's window
+visible during a session; the app pauses measuring while it is hidden.
+
 Third-party runtime: MediaPipe tasks-vision 1.1.1 and its face landmarker model, both self-hosted.
 The library has a built-in usage logger that the CSP blocks (see `docs/ETHICS_AND_PRIVACY.md`).
 

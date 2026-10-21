@@ -10,6 +10,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { Point } from '../blink/ear.ts';
 import { lockCameraAuto, type CameraLockResult } from '../capture/cameraLock.ts';
 import { median, percentile } from '../dsp/stats.ts';
+import type { BlinkEvent } from '../blink/blinkDetector.ts';
 import { PulseEstimator, type PulseFrame, type PulseUpdate } from '../rppg/pulseEstimator.ts';
 import { ESTIMATE_HEADER, FRAME_HEADER, estimateRow, frameRow } from '../rppg/traceCsv.ts';
 import type { RegionId } from '../rppg/roi.ts';
@@ -99,6 +100,8 @@ export interface Blink {
   /** Eye-closure indicator: record / abandon the alert baseline. */
   startBaseline: () => void;
   cancelBaseline: () => void;
+  /** Receive every blink event as it is detected (study mode); null to stop. */
+  setEventListener: (fn: ((e: BlinkEvent) => void) | null) => void;
 }
 
 const TIMING_WINDOW = 120;
@@ -134,6 +137,11 @@ class Runtime {
   loading = false;
   overlay: OverlayFrame | null = null;
   recorder: Recorder | null = null;
+  eventListener: ((e: BlinkEvent) => void) | null = null;
+
+  setEventListener(fn: ((e: BlinkEvent) => void) | null): void {
+    this.eventListener = fn;
+  }
 
   setRecorder(r: Recorder | null): void {
     this.recorder = r;
@@ -214,7 +222,7 @@ export function useBlink(capture: Capture): Blink {
         const w = video.videoWidth;
         const h = video.videoHeight;
         const points = frame.landmarks ? toPixels(frame.landmarks, w, h) : null;
-        pipeline.process(
+        const event = pipeline.process(
           tick,
           points
             ? {
@@ -224,6 +232,7 @@ export function useBlink(capture: Capture): Blink {
               }
             : null,
         );
+        if (event) state.eventListener?.(event);
         // Pulse uses the same gating as blinks: face found and head pose in range.
         const faceValid = points !== null && pipeline.lastFrame.status === 'ok';
         const { frame: pulseFrame, polygons } = buildPulseFrame(
@@ -338,6 +347,9 @@ export function useBlink(capture: Capture): Blink {
     cancelBaseline: () => {
       pipeline.cancelBaseline();
       setSnapshot(pipeline.snapshot());
+    },
+    setEventListener: (fn) => {
+      state.setEventListener(fn);
     },
   };
 }

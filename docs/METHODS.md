@@ -470,3 +470,76 @@ baseline (13% after 30 s); the confirmation gets focus; after about 3 minutes th
 with "too few blinks", as expected for a face that never blinks. No external requests, no errors.
 The trend plots, gauge, and summary with real values were checked only in unit and server-render
 tests, because the synthetic face cannot blink.
+
+## Study mode (`src/study/`, `#study`, Phase 4B)
+
+Implements PROJECT_SPEC 5.8 and the draft `docs/STUDY_PROTOCOL.md` Sections 8-10. The protocol is
+**not frozen**, and the rating wording is a placeholder until the KSS permission (decision D2), so
+study mode is for testing on oneself only.
+
+- **Clock:** the session uses `performance.now()`. Frame timestamps come from
+  `requestVideoFrameCallback` `captureTime` or `presentationTime`, which are on the same clock
+  (Section "Frame timestamps"); the export records the timestamp source so a session that fell back
+  to `mediaTime` can be excluded.
+- **Steps** (`session.ts`, a pure state machine driven by a 250 ms timer): setup (participant
+  code, session number, glasses, consent check) -> blink calibration -> first rating -> alert
+  baseline (the indicator's baseline rules; a failure ends the session with the reason) -> PVT-B
+  -> 25-minute work block with a rating at 5, 10, 15, 20, and 25 minutes -> PVT-B -> finished.
+  An unanswered rating closes after 60 s and is recorded as missing; the second PVT-B starts only
+  after the last prompt is answered or times out. The session can be stopped at any step, and it
+  ends if the camera stops after calibration.
+- **Rating prompt:** nine buttons in a corner box that does not take keyboard focus; the window
+  title changes while it is open so it shows in the taskbar. The first rating is a full panel.
+- **PVT-B** (`pvt.ts`): the counter is written to the DOM from animation frames; the stimulus
+  onset is the frame time, the response time the key or pointer event's `timeStamp`. Lapse
+  RT >= 355 ms or no response in 30 s; false start RT < 100 ms or a response with nothing showing;
+  the next stimulus 1-4 s (uniform) after each response, including the 1 s feedback; a stimulus
+  still showing at 3:00 is not scored. Space or a tap on the box; the box gets focus at the start
+  so Space cannot press another button. No flashing: only the number changes.
+- **Analysis windows:** the 5 minutes before each work-block prompt appears, and each PVT-B run,
+  evaluated with the indicator's gating 5 s after they end (blink events arrive when the eye
+  reopens). Events are kept 60 s beyond the 5-minute window so a late evaluation sees the same
+  data (tested).
+- **Blinding (SPEC_AMENDMENT_01 C3, draft decision D5):** during a session the screen shows only
+  the step, instructions, and a text face status. The indicator, its factors and bands, the blink
+  and pulse cards, the EAR plot, and the camera preview are not rendered; the preview's video stays
+  in the page at 1 px (clipped) because measuring needs it. The review (indicator tab, blink
+  timeline, reaction-time summary, ratings) appears only after the export.
+- **Export** (`studyCsv.ts`, format `blinkpulse-study-1`): `# key=value` header lines (app commit,
+  participant code, session, local start time, time slot, glasses, display rules, rating wording,
+  end reason, timestamp source, camera size and rate), then `#section=` tables: steps, calibration,
+  baseline (with the first rating and the "not alert" flag for a rating of 6 or more), ratings,
+  windows, trend (both windows every 10 s), events, PVT-B trials, PVT-B summaries. Times are ms
+  since the session start. Every eye-closure row has coverage, lost time by reason, and the median
+  frame rate; a failed window has its reason and empty factor cells, never a number.
+
+**Tests:** `pvt.test.ts` (11): onset at the showing frame, RT from event time, feedback 1 s, next
+stimulus 1-4 s after the response over a full seeded run, lapse at 355 ms but not 354 ms, false
+starts (no stimulus, 99 ms, negative RT) restart the interval, 30 s timeout, end at 3:00 with an
+unscored last stimulus, summary statistics. `session.test.ts` (12): step order, prompt timing,
+60 s time-out, last prompt before the second PVT-B, window bounds, settled evaluation, baseline
+failure, stop, export flag, rating range, participant-code format, time slots.
+`studyCsv.test.ts` (9): header values, sections, relative times, missing ratings, failed windows
+without numbers, trend limited to the session, PVT-B summaries, every cell a number or short code,
+"not alert" flag. `StudyScreen.test.tsx` (15): for every step from setup to finished, the rendered
+page has no indicator title, subtitle, band, or factor label and no blink, closed-fraction, or
+pulse card; the preview is hidden except during calibration; the review appears only after the
+export. `sleepiness.test.ts` (+2): a window evaluated 30 s late equals the on-time result; lost
+time and frame rate per window.
+
+**Browser check** (2026-10-19, production build, headless Chrome; the camera was a synthetic
+rendered face that closes its eyes for 5 frames every 4 s, i.e. 15 blinks/min, as a looping
+video; no real person): the main app measured 15 blinks/min (median duration 212 ms for 167 ms
+drawn closures). One full study session (34.5 min): every step in order; a typed name was
+refused as a participant code; the alert baseline finished at 3:10 (36 blinks, 12/min); five
+prompts at 5-minute steps, one left unanswered and recorded as missing after 60 s, the window
+title changed while each prompt was open; seven analysis windows all passed gating, with ECI
+0.98-0.99 for unchanged behaviour; on every step the page text had none of the indicator, band,
+factor, blink, closed-fraction, or pulse labels and the preview was hidden after calibration;
+the review appeared only after the export; no errors, no external requests. In that run the test
+script pressed Space 1-25 ms after each number appeared, so every response was correctly scored a
+false start. A second run to the first PVT-B with responses about 200 ms and 420 ms after the
+number appeared, and one stimulus left unanswered: RTs of about 216-229 ms (the script's own delay
+adds about 25 ms), 420 ms responses and the 30 s non-response scored as lapses (14 of 53 stimuli),
+median RT 225.8 ms; the session was then stopped and exported with `end_reason=stopped`. These
+check the plumbing only; they say nothing about the RT accuracy of a real display and keyboard.
