@@ -1,7 +1,9 @@
 /**
  * Study mode (PROJECT_SPEC 5.8): drives a StudySession from the camera and blink
- * pipeline. All times are performance.now() milliseconds, the clock of the frame
- * timestamps (requestVideoFrameCallback captureTime / presentationTime).
+ * pipeline. The session's times are performance.now() milliseconds (also the clock of
+ * the PVT-B's frame and input timestamps). The blink pipeline uses frame time, which
+ * starts at 0 with each camera session, so blink events, window ends, and trend points
+ * are shifted by the capture's offset between the two clocks.
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -15,15 +17,23 @@ import type { Blink } from './useBlink.ts';
 
 const TICK_MS = 250;
 
-/** Camera details for the export header (kept after the camera stops) and whether it runs. */
+/**
+ * Camera details for the export header and the clock offset (kept after the camera
+ * stops), and whether it runs.
+ */
 class LastCamera {
   settings: CameraSettings | null = null;
   source: TimestampSource | null = null;
   running = false;
+  /** performance.now() minus frame time (see Capture.perfOffsetMs). */
+  offsetMs = NaN;
   update(settings: CameraSettings | null, source: TimestampSource | null, running: boolean): void {
     if (settings) this.settings = settings;
     if (source) this.source = source;
     this.running = running;
+  }
+  updateOffset(offsetMs: number): void {
+    if (Number.isFinite(offsetMs)) this.offsetMs = offsetMs;
   }
 }
 
@@ -52,6 +62,7 @@ export function useStudy(capture: Capture, blink: Blink): Study {
     setVersion((v) => v + 1);
   }, []);
   const { pipeline, setEventListener, startBaseline } = blink;
+  const { perfOffsetMs } = capture;
   const [camera] = useState(() => new LastCamera());
   const { settings: liveSettings, timestampSource: liveSource } = capture.snapshot;
   const running = capture.snapshot.status === 'running';
@@ -63,12 +74,14 @@ export function useStudy(capture: Capture, blink: Blink): Study {
   useEffect(() => {
     if (!session) return;
     setEventListener((e) => {
-      session.addEvent(e);
+      camera.updateOffset(perfOffsetMs());
+      const off = camera.offsetMs;
+      session.addEvent({ ...e, startMs: e.startMs + off, endMs: e.endMs + off });
     });
     return () => {
       setEventListener(null);
     };
-  }, [session, setEventListener]);
+  }, [session, setEventListener, perfOffsetMs, camera]);
 
   const step = session?.step ?? 'setup';
   const active = session !== null && step !== 'finished';
@@ -83,8 +96,10 @@ export function useStudy(capture: Capture, blink: Blink): Study {
         session.stop('cameraStopped', performance.now());
       }
       session.tick(performance.now(), pipeline.eyeClosureBaseline);
-      session.resolveWindows(pipeline.latestEyeClosureMs, (w, end) =>
-        pipeline.evaluateEyeClosure(w, end),
+      camera.updateOffset(perfOffsetMs());
+      const off = camera.offsetMs;
+      session.resolveWindows(pipeline.latestEyeClosureMs + off, (w, end) =>
+        pipeline.evaluateEyeClosure(w, end - off),
       );
       const after = `${session.step}|${String(session.ratings.length)}|${String(session.openRating === null)}`;
       if (after !== before) changed();
@@ -92,7 +107,7 @@ export function useStudy(capture: Capture, blink: Blink): Study {
     return () => {
       window.clearInterval(id);
     };
-  }, [session, active, pipeline, changed, camera]);
+  }, [session, active, pipeline, changed, camera, perfOffsetMs]);
 
   return {
     session,
@@ -125,9 +140,10 @@ export function useStudy(capture: Capture, blink: Blink): Study {
     exportCsv: () => {
       if (!session || session.step !== 'finished') return null;
       // Windows still unsettled (the last PVT-B just ended) are evaluated as they are.
+      const off = camera.offsetMs;
       session.resolveWindows(
-        pipeline.latestEyeClosureMs,
-        (w, end) => pipeline.evaluateEyeClosure(w, end),
+        pipeline.latestEyeClosureMs + off,
+        (w, end) => pipeline.evaluateEyeClosure(w, end - off),
         true,
       );
       const settings = camera.settings;
@@ -139,7 +155,7 @@ export function useStudy(capture: Capture, blink: Blink): Study {
           settings?.width && settings.height && settings.frameRate
             ? { width: settings.width, height: settings.height, frameRate: settings.frameRate }
             : null,
-        trend: pipeline.snapshot().indicator.trend,
+        trend: pipeline.snapshot().indicator.trend.map((p) => ({ ...p, tMs: p.tMs + off })),
         ratingWording: 'placeholder',
       });
       session.markExported();

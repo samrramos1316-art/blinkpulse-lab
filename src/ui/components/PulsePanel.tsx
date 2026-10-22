@@ -12,7 +12,7 @@ import {
   spectrumSpec,
   waveformSpec,
 } from '../plot/pulsePlots.ts';
-import { regionRow, showsBpm } from '../pulseDisplay.ts';
+import { combinedRow, regionRow, showsBpm } from '../pulseDisplay.ts';
 import { Chart } from './Chart.tsx';
 
 const FILTER_SPEC = filterSpec();
@@ -83,12 +83,8 @@ export function PulsePanel({
             <tfoot>
               <tr>
                 <th scope="row">Combined</th>
-                <td className="tabular">{pulse.fusion.bpm.toFixed(0)}</td>
-                <td colSpan={2}>
-                  {pulse.fusion.agreementBpm === null
-                    ? 'One region used.'
-                    : `Regions agree within ${pulse.fusion.agreementBpm.toFixed(1)} BPM.`}
-                </td>
+                <td className="tabular">{combinedRow(pulse.fusion).bpm}</td>
+                <td colSpan={2}>{combinedRow(pulse.fusion).note}</td>
               </tr>
             </tfoot>
           ) : null}

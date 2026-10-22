@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { projectChart, type ChartSpec } from '../plot/chart.ts';
+import { useThemeVersion } from '../theme/useThemeVersion.ts';
 
 const PAD = { left: 48, right: 12, top: 14, bottom: 22 };
 
@@ -102,6 +103,7 @@ interface ChartProps {
 /** A hand-drawn canvas chart with a text alternative (no chart library). */
 export function Chart({ title, spec, description, version, emptyText }: ChartProps) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const theme = useThemeVersion();
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas || !spec) return;
@@ -115,7 +117,7 @@ export function Chart({ title, spec, description, version, emptyText }: ChartPro
     };
     // `version` identifies the data; `spec` is rebuilt every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [version, spec === null]);
+  }, [version, spec === null, theme]);
 
   return (
     <figure className="plot">

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { FusionResult } from '../rppg/fusion.ts';
 import type { PulseUpdate, RegionReport } from '../rppg/pulseEstimator.ts';
 import { PULSE_COPY, PULSE_FLAG_TEXT } from './copy.ts';
-import { labSummary, mainFlagText, pulseCard, regionRow } from './pulseDisplay.ts';
+import { combinedRow, labSummary, mainFlagText, pulseCard, regionRow } from './pulseDisplay.ts';
 
 const fusion = (over: Partial<FusionResult> = {}): FusionResult => ({
   bpm: 71.6,
@@ -120,5 +120,21 @@ describe('region rows and flag text', () => {
   it('flag priority: motion first', () => {
     expect(mainFlagText(['crossCheck', 'motion'])).toBe(PULSE_FLAG_TEXT.motion);
     expect(mainFlagText([])).toBeNull();
+  });
+});
+
+describe('combinedRow', () => {
+  it('shows the fused value at Fair or better', () => {
+    expect(combinedRow(fusion())).toEqual({ bpm: '72', note: 'Regions agree within 2.0 BPM.' });
+    expect(combinedRow(fusion({ agreementBpm: null, singleRegion: true, level: 'fair' }))).toEqual({
+      bpm: '72',
+      note: 'One region used.',
+    });
+  });
+
+  it('hides the fused value when disagreement lowers it to Poor', () => {
+    const r = combinedRow(fusion({ level: 'poor', agreementBpm: 11, regionsDisagree: true }));
+    expect(r.bpm).toBe('-');
+    expect(r.note).toBe('Regions differ by 11.0 BPM. Quality: Poor.');
   });
 });

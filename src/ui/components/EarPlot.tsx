@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useThemeVersion } from '../theme/useThemeVersion.ts';
 import type { BlinkPipeline } from '../../app/blinkPipeline.ts';
 import { buildEarPlot, describeEarPlot, type EarPlotModel } from '../plot/earPlotModel.ts';
 
@@ -118,6 +119,7 @@ function draw(canvas: HTMLCanvasElement, pipeline: BlinkPipeline): void {
 export function EarPlot({ pipeline, active }: { pipeline: BlinkPipeline; active: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [description, setDescription] = useState(() => describeEarPlot(pipeline.history()));
+  const theme = useThemeVersion();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -138,7 +140,7 @@ export function EarPlot({ pipeline, active }: { pipeline: BlinkPipeline; active:
       window.clearInterval(id);
       window.clearInterval(textId);
     };
-  }, [pipeline, active]);
+  }, [pipeline, active, theme]);
 
   return (
     <figure className="plot">

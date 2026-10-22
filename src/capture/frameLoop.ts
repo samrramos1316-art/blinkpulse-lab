@@ -28,12 +28,24 @@ export function startFrameLoop(
   onFrame: (frame: LoopFrame) => void,
 ): { kind: FrameLoopKind; stop: () => void } {
   let running = true;
+  // An exception (e.g. the landmarker failing on one frame) is logged once, not thrown:
+  // thrown out of the callback it would skip re-registering it, and the loop would stop
+  // for good while the camera kept running.
+  let logged = false;
+  const safely = (frame: LoopFrame) => {
+    try {
+      onFrame(frame);
+    } catch (err) {
+      if (!logged) console.error('Frame processing failed', err);
+      logged = true;
+    }
+  };
 
   if (hasVideoFrameCallback(video)) {
     let handle = 0;
     const tick = (now: number, meta: VideoFrameCallbackMetadata) => {
       if (!running) return;
-      onFrame({ nowMs: now, meta });
+      safely({ nowMs: now, meta });
       handle = video.requestVideoFrameCallback(tick);
     };
     handle = video.requestVideoFrameCallback(tick);
@@ -51,7 +63,7 @@ export function startFrameLoop(
     if (!running) return;
     // HAVE_CURRENT_DATA: a frame is available.
     if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-      onFrame({ nowMs: performance.now(), meta: null });
+      safely({ nowMs: performance.now(), meta: null });
     }
     handle = requestAnimationFrame(tick);
   };

@@ -1,7 +1,8 @@
 /**
  * Study-mode session runner (PROJECT_SPEC 5.8, docs/STUDY_PROTOCOL.md Section 8).
- * Pure: the caller passes times in ms (performance.now(), the same clock as the
- * frame timestamps) and the eye-closure tracker's state.
+ * Pure: the caller passes times in ms on one clock (performance.now(); blink events
+ * and window evaluation are converted from frame time by the caller, useStudy.ts) and
+ * the eye-closure tracker's state.
  *
  * Steps: setup (consent check, IDs) -> blink calibration -> rating -> alert
  * baseline -> PVT-B -> 25 min of the participant's own work with a rating every

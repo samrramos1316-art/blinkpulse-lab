@@ -20,6 +20,7 @@ import { MetricCard } from './components/MetricCard.tsx';
 import { PreviewPanel } from './components/PreviewPanel.tsx';
 import { SessionTimeline } from './components/SessionTimeline.tsx';
 import { SetupGuide } from './components/SetupGuide.tsx';
+import { SkipLink } from './components/SkipLink.tsx';
 import { Tabs } from './components/Tabs.tsx';
 import { readSetupDone, writeSetupDone } from './setup.ts';
 import { INDICATOR, METRIC } from './strings.ts';
@@ -55,9 +56,7 @@ export function App({ initialSetupOpen, initialLab = false }: AppProps) {
 
   return (
     <>
-      <a className="skip-link" href="#main">
-        Skip to main content
-      </a>
+      <SkipLink />
       <Header
         status={capture.snapshot.status}
         onStart={start}

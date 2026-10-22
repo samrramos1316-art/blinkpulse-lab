@@ -295,4 +295,26 @@ describe('CaptureController: timestamps', () => {
     t.frames([1000, 1033, 1033, 1066]);
     expect(ticks).toEqual([0, 33, 66]);
   });
+  it('reports the offset from frame time to performance.now(), per camera session', async () => {
+    const t = setup();
+    await t.controller.start();
+    expect(t.controller.perfOffsetMs).toBeNaN();
+    t.frames([5000, 5033, 5066]);
+    // captureTime is on the performance.now() clock: tMs 0 is performance.now() 5000.
+    expect(t.controller.perfOffsetMs).toBe(5000);
+    t.controller.stop();
+    expect(t.controller.perfOffsetMs).toBe(5000); // kept for exports after Stop
+    await t.controller.start();
+    expect(t.controller.perfOffsetMs).toBeNaN();
+    t.frames([90_000, 90_033]);
+    expect(t.controller.perfOffsetMs).toBe(90_000);
+  });
+
+  it('takes the offset from the callback time when only mediaTime is available', async () => {
+    const t = setup();
+    await t.controller.start();
+    t.frame({ nowMs: 7010, meta: { mediaTime: 2 } });
+    t.frame({ nowMs: 7043, meta: { mediaTime: 2.033 } });
+    expect(t.controller.perfOffsetMs).toBeCloseTo(7010, 6);
+  });
 });

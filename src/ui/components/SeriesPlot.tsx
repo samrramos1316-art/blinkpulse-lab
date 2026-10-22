@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useThemeVersion } from '../theme/useThemeVersion.ts';
 import { buildSeriesPlot, indexAtX, type RefLine } from '../plot/seriesPlotModel.ts';
 
 const PAD = { left: 40, right: 12, top: 10, bottom: 22 };
@@ -190,6 +191,7 @@ export function SeriesPlot({
 }: SeriesPlotProps) {
   const ref = useRef<HTMLCanvasElement>(null);
   const [hover, setHover] = useState<number | null>(null);
+  const theme = useThemeVersion();
   const key = values
     .map((x, i) => `${x === null ? 'n' : x.toFixed(4)}${usable?.[i] === false ? 'u' : ''}`)
     .join(',');
@@ -220,7 +222,7 @@ export function SeriesPlot({
     };
     // `key` and `refKey` capture the data; re-draw only when they or the pointer change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, refKey, fixedMax, integer, markers, hover]);
+  }, [key, refKey, fixedMax, integer, markers, hover, theme]);
 
   return (
     <figure className="plot">

@@ -91,6 +91,7 @@ export class CaptureController {
   private skipped = 0;
   private hidden = false;
   private wasHidden = false;
+  private perfOffset = NaN;
 
   constructor(deps: CaptureDeps) {
     this.deps = deps;
@@ -114,6 +115,17 @@ export class CaptureController {
   /** Recent gaps (long intervals, hidden tab, source change) for window invalidation. */
   gapIntervals() {
     return this.clock.gapIntervals();
+  }
+
+  /**
+   * performance.now() minus frame time (FrameTick.tMs, which starts at 0 with each
+   * camera session) for the current or last camera session; NaN before its first
+   * frame. captureTime, presentationTime, and the fallback are on the performance.now()
+   * clock, so the offset is exact for them; for mediaTime it is taken from the
+   * callback time and includes the frame's delivery delay.
+   */
+  get perfOffsetMs(): number {
+    return this.perfOffset;
   }
 
   // --- lifecycle ---
@@ -196,6 +208,7 @@ export class CaptureController {
 
     const tick = this.clock.push(raw);
     if (tick === null) return;
+    this.perfOffset = (this.source === 'mediaTime' ? frame.nowMs : raw) - tick.tMs;
     for (const listener of this.frameListeners) listener(tick);
   }
 
@@ -247,6 +260,7 @@ export class CaptureController {
     this.skipped = 0;
     this.hidden = false;
     this.wasHidden = false;
+    this.perfOffset = NaN;
   }
 
   private update(next: CaptureSnapshot): void {

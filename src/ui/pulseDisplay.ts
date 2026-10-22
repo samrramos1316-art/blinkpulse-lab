@@ -4,6 +4,7 @@
  */
 
 import type { FaceStatus } from '../app/blinkPipeline.ts';
+import type { FusionResult } from '../rppg/fusion.ts';
 import type { PulseUpdate, RegionReport } from '../rppg/pulseEstimator.ts';
 import type { PulseFlag, QualityLevel } from '../rppg/quality.ts';
 import { PULSE_COPY, PULSE_FLAG_TEXT, REGION_LABEL } from './copy.ts';
@@ -100,6 +101,23 @@ export function regionRow(r: RegionReport, kept: boolean): RegionRow {
     reason,
     kept,
   };
+}
+
+/**
+ * The combined row of the region table. The fused value is shown only at Fair or
+ * better, like the card: regions that disagree lower it to Poor.
+ */
+export function combinedRow(f: FusionResult): { bpm: string; note: string } {
+  const agreement =
+    f.agreementBpm === null
+      ? 'One region used.'
+      : f.regionsDisagree
+        ? `Regions differ by ${f.agreementBpm.toFixed(1)} BPM.`
+        : `Regions agree within ${f.agreementBpm.toFixed(1)} BPM.`;
+  if (f.bpm === null || f.level === 'poor') {
+    return { bpm: '-', note: `${agreement} ${qualityText('poor')}.` };
+  }
+  return { bpm: f.bpm.toFixed(0), note: agreement };
 }
 
 /** A region's pulse rate may be shown (quality at least Fair). */

@@ -503,3 +503,27 @@ frozen) and validation V3 run and reported, which needs participants.
 | Light/dark at 360/768/1280 with screenshots                    | Done                                                                    |
 | Keyboard-only first run                                        | Done                                                                    |
 | Usability check with 2 people                                  | Not done (needs the author)                                             |
+
+## Bug review (2026-10-21, author's request)
+
+A read-through of the app code (capture, blink, indicator, pulse, study mode, UI) for bugs. Six
+found and fixed; `npm run check` passes (532 tests).
+
+| Bug                                                                                                                                                                                                                                                                               | Fix                                                                                                                                                                                   |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Study mode mixed two clocks.** The session used `performance.now()`, but frame times start at 0 with each camera session. Analysis windows were placed too late by the time from page load to the first frame, and exported blink events and the trend were on the wrong clock. | The capture reports the offset between the clocks (`perfOffsetMs`); study mode converts events, window ends, and trend points (`useStudy.ts`). Tested on the offset; METHODS updated. |
+| **The skip link left study mode.** It set the hash to `#main`, and the hash selects the view, so pressing it ended a running study session.                                                                                                                                       | `SkipLink` moves focus without changing the hash.                                                                                                                                     |
+| **One failing frame stopped the frame loop.** An exception in frame processing skipped re-registering the callback; the camera kept running with no measurements.                                                                                                                 | Errors are caught and logged once; the loop continues.                                                                                                                                |
+| **The Pulse tab's "Combined" row showed a BPM at Poor quality** (regions disagreeing lower the fused level to Poor), against PROJECT_SPEC 5.4.                                                                                                                                    | `combinedRow` shows "-" and "Quality: Poor" then (tested).                                                                                                                            |
+| **Plots kept the old theme's colours** after switching theme until new data arrived; the filter response never redrew.                                                                                                                                                            | Plots redraw on a theme change (`useThemeVersion`).                                                                                                                                   |
+| **Restarting a calibration that was still running kept the earlier head poses** in the reference pose.                                                                                                                                                                            | Cleared on restart (tested; the test fails without the fix).                                                                                                                          |
+
+**Verified in the browser** (production build, headless Chrome, no camera): the skip link in
+`#study` keeps the study view and focuses the main content; the Signal Lab filter plot redraws when
+the theme changes; no page errors. **Not verified:** the study clock fix in a full live session
+(needs a 40-minute session with real blinks).
+
+Noted, not changed: a numeric trace stops adding rows after 30 minutes while the panel still says it
+is recording; the pulse table and Signal Lab keep showing the last estimate after Stop (the pulse
+card says "Not started"); the eye-closure ring holds 6 minutes only at up to about 66 frames per
+second.

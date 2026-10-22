@@ -111,6 +111,20 @@ describe('BlinkPipeline', () => {
     expect(p.snapshot().faceStatus).toBe('headTurned');
   });
 
+  it('restarting a running calibration forgets the poses seen before the restart', () => {
+    const p = new BlinkPipeline(EYE_A, EYE_B);
+    p.startCalibration();
+    for (let i = 0; i < 290; i++) p.process(tick(i), face(0.3, 0, 40)); // looking down
+    p.startCalibration();
+    // After the restart: 100 frames without a face, then 201 with pitch 0. Without the
+    // reset, the 290 earlier poses would be the majority and the reference would be 40.
+    for (let i = 290; i <= 290 + (CALIBRATION_MS * 30) / 1000; i++) {
+      p.process(tick(i), i < 390 ? null : face(0.3));
+    }
+    expect(p.snapshot().calibration.phase).toBe('done');
+    expect(p.snapshot().referencePose?.pitchDeg).toBe(0);
+  });
+
   it('no pose gating before calibration or during it', () => {
     const p = new BlinkPipeline(EYE_A, EYE_B);
     p.process(tick(0), face(0.3, 60, 40));

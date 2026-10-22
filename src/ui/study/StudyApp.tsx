@@ -6,6 +6,7 @@ import { useWakeLock } from '../../app/useWakeLock.ts';
 import { liveStatusText } from '../captureStatus.ts';
 import { Footer } from '../components/Footer.tsx';
 import { PreviewPanel } from '../components/PreviewPanel.tsx';
+import { SkipLink } from '../components/SkipLink.tsx';
 import { ThemeToggle } from '../components/ThemeToggle.tsx';
 import { downloadText } from '../download.ts';
 import { LockIcon, LogoMark, PlayIcon, StopIcon } from '../icons/Icons.tsx';
@@ -50,9 +51,7 @@ export function StudyApp() {
 
   return (
     <>
-      <a className="skip-link" href="#main">
-        Skip to main content
-      </a>
+      <SkipLink />
       <header className="app-header">
         <div className="app-header__inner">
           <div className="brand">

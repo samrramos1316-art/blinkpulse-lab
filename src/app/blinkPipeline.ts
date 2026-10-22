@@ -220,6 +220,7 @@ export class BlinkPipeline {
     if (this.calibration.phase !== 'running') this.beforeCalibration = this.calibration;
     this.calibration = { phase: 'running', startedMs: NaN, progress: 0, samples: 0 };
     this.calibrationSamples = [];
+    this.calibrationPoses = [];
   }
 
   /** Abandon a running calibration; the previous one (if any) stays in force. */

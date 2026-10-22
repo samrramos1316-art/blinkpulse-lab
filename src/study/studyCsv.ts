@@ -20,7 +20,7 @@ export interface StudyExportInput {
   appCommit: string;
   timestampSource: string | null;
   camera: { width: number; height: number; frameRate: number } | null;
-  /** The tracker's 10 s trend (frame clock). */
+  /** The tracker's 10 s trend, with times on the session's clock. */
   trend: readonly TrendPoint[];
   /** The rating wording is a placeholder until the KSS permission (protocol D2). */
   ratingWording: 'placeholder' | 'kss';

@@ -43,6 +43,8 @@ export interface Capture {
   stop: () => void;
   /** Per-frame callback (not throttled). Returns an unsubscribe function. */
   addFrameListener: CaptureController['addFrameListener'];
+  /** performance.now() minus frame time for the current camera session, or NaN. */
+  perfOffsetMs: () => number;
 }
 
 export function useCapture(): Capture {
@@ -66,6 +68,7 @@ export function useCapture(): Capture {
         controller.stop();
       },
       addFrameListener: controller.addFrameListener.bind(controller),
+      perfOffsetMs: () => controller.perfOffsetMs,
     };
   });
   const { controller } = api;
@@ -93,5 +96,6 @@ export function useCapture(): Capture {
     start: api.start,
     stop: api.stop,
     addFrameListener: api.addFrameListener,
+    perfOffsetMs: api.perfOffsetMs,
   };
 }

@@ -505,10 +505,15 @@ Implements PROJECT_SPEC 5.8 and the draft `docs/STUDY_PROTOCOL.md` Sections 8-10
 **not frozen**, and the rating wording is a placeholder until the KSS permission (decision D2), so
 study mode is for testing on oneself only.
 
-- **Clock:** the session uses `performance.now()`. Frame timestamps come from
-  `requestVideoFrameCallback` `captureTime` or `presentationTime`, which are on the same clock
-  (Section "Frame timestamps"); the export records the timestamp source so a session that fell back
-  to `mediaTime` can be excluded.
+- **Clock:** the session (steps, ratings, PVT-B) uses `performance.now()`. The blink pipeline uses
+  frame time, which starts at 0 with each camera session, so blink events, the analysis windows,
+  and the trend are converted with the capture's offset between the two clocks (frame timestamps
+  from `captureTime` or `presentationTime` are on the `performance.now()` clock, so the offset is
+  exact; with `mediaTime` it includes the frame's delivery delay). The export records the
+  timestamp source so a session that fell back to `mediaTime` can be excluded. Before 2026-10-21
+  this conversion was missing: the windows were placed by the time from page load to the first
+  camera frame too late, and events and the trend were exported on the wrong clock (found in a
+  code review; no study data had been collected).
 - **Steps** (`session.ts`, a pure state machine driven by a 250 ms timer): setup (participant
   code, session number, glasses, consent check) -> blink calibration -> first rating -> alert
   baseline (the indicator's baseline rules; a failure ends the session with the reason) -> PVT-B
