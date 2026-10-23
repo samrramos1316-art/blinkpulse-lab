@@ -25,22 +25,24 @@ function mean(x: ArrayLike<number>): number {
 /**
  * One trace from several regions' windows: at each frame time present in EVERY
  * window, the equal-weight average of each channel divided by that region's window
- * mean. Returns null with fewer than MIN_POOLED_REGIONS windows. Frames missing from
+ * mean. Returns null with fewer than MIN_POOLED_REGIONS usable windows (a channel
+ * whose window mean is not positive makes a window unusable). Frames missing from
  * any region are left out, so the usual gap rules apply to the pooled trace.
  */
 export function poolWindows(windows: readonly TraceWindow[]): TraceWindow | null {
-  if (windows.length < MIN_POOLED_REGIONS) return null;
-  const k = windows.length;
-  const scaled = windows.map((w) => {
+  const scaled = windows.flatMap((w) => {
     const mr = mean(w.r);
     const mg = mean(w.g);
     const mb = mean(w.b);
+    // A channel with no light (mean 0) cannot be normalised: leave the region out.
+    if (!(mr > 0 && mg > 0 && mb > 0)) return [];
     const at = new Map<number, number>();
     for (let i = 0; i < w.tMs.length; i++) at.set(w.tMs[i] as number, i);
-    return { w, at, mr, mg, mb };
+    return [{ w, at, mr, mg, mb }];
   });
+  const k = scaled.length;
   const first = scaled[0];
-  if (!first) return null;
+  if (k < MIN_POOLED_REGIONS || !first) return null;
   const out: { tMs: number[]; r: number[]; g: number[]; b: number[] } = {
     tMs: [],
     r: [],

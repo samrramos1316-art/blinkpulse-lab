@@ -19,6 +19,14 @@ describe('poolWindows', () => {
     expect(p?.b[1]).toBeCloseTo((10 / 10 + 1) / 2, 10);
   });
 
+  it('leaves out a region with a channel that has no light', () => {
+    const ok = { tMs: [0, 33], r: [100, 102], g: [50, 51], b: [20, 21] };
+    const dark = { tMs: [0, 33], r: [100, 102], g: [50, 51], b: [0, 0] };
+    expect(poolWindows([ok, dark])).toBeNull();
+    const p = poolWindows([ok, ok, dark]);
+    expect(Array.from(p?.b ?? [NaN]).every((v) => Number.isFinite(v))).toBe(true);
+  });
+
   it('needs at least two regions', () => {
     expect(poolWindows([])).toBeNull();
     expect(poolWindows([{ tMs: [0, 1], r: [1, 1], g: [1, 1], b: [1, 1] }])).toBeNull();

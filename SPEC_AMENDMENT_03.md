@@ -42,7 +42,9 @@ It does not help with noise the regions share (head motion, lighting changes).
 
 **D2. Confirm the first value** (`BpmSmoother`). When the smoother has no history (start, or after
 5 hops without a shown value), an estimate is shown only when the next one agrees with it within
-6 BPM, the same rule that step 5 already uses for jumps. Meanwhile the card shows "-" with
+6 BPM, the same rule that step 5 already uses for jumps. "Next" means consecutive: a hop without a
+usable estimate drops the held one (for jumps too; before, a held estimate could be confirmed
+several seconds later). Meanwhile the card shows "-" with
 "Checking the reading... hold still." This adds one second before the first value.
 
 ## Evidence (synthetic only)
@@ -52,16 +54,16 @@ row:
 
 | Noise sd per region | Before: shown / off > 5 BPM | D2 only: shown / off > 5 BPM | D1 + D2: shown / off > 5 BPM |
 | ------------------- | --------------------------- | ---------------------------- | ---------------------------- |
-| 0.3                 | 78.3% / 0.0%                | 74.8% / 0.0%                 | 96.6% / 0.0%                 |
-| 0.6                 | 10.8% / 0.0%                | 8.2% / 0.0%                  | 30.4% / 0.0%                 |
-| 0.8                 | 3.6% / 4.2%                 | 2.2% / 2.3%                  | 10.4% / 0.0%                 |
-| 1.0                 | 1.7% / 9.1%                 | 1.0% / 5.3%                  | 4.4% / 1.1%                  |
-| 1.3                 | 0.9% / 23.5%                | 0.4% / 12.5%                 | 1.4% / 3.7%                  |
-| 0.5 / 1 / 1         | 12.4% / 0.4%                | 9.1% / 0.0%                  | 13.7% / 0.0%                 |
+| 0.3                 | 78.3% / 0.0%                | 74.7% / 0.0%                 | 96.6% / 0.0%                 |
+| 0.6                 | 10.8% / 0.0%                | 7.8% / 0.0%                  | 30.1% / 0.0%                 |
+| 0.8                 | 3.6% / 4.2%                 | 2.0% / 2.5%                  | 10.2% / 0.0%                 |
+| 1.0                 | 1.7% / 9.1%                 | 0.9% / 5.6%                  | 4.3% / 1.2%                  |
+| 1.3                 | 0.9% / 23.5%                | 0.4% / 12.5%                 | 1.3% / 3.8%                  |
+| 0.5 / 1 / 1         | 12.4% / 0.4%                | 8.6% / 0.0%                  | 13.1% / 0.0%                 |
 | no pulse (sd 1)     | 0.8% shown (all wrong)      | 0.0%                         | 0.0%                         |
 
 "Off > 5 BPM" is a share of the shown values. Mean absolute error of shown values at sd 1.0: 4.92
-BPM before, 1.14 BPM after.
+BPM before, 1.17 BPM after.
 
 Limits: identical pulse and independent Gaussian noise in every region is the most favourable case
 for pooling. Real faces add motion, lighting changes, and noise shared between regions; this is

@@ -392,7 +392,8 @@ not used.
   held and accepted (with the held one) only if the next is within 6 BPM of it (the 6 BPM is a
   starting value). After 5 hops without a shown value the history is cleared. With no history
   (start, or after that reset) the first estimate is shown only when the next agrees within
-  6 BPM (SPEC_AMENDMENT_03 D2).
+  6 BPM (SPEC_AMENDMENT_03 D2). A hop without a usable estimate drops any held estimate, so
+  confirmation always comes from the next hop.
 - Pooled-region fallback (SPEC_AMENDMENT_03 D1): when the fusion has no Fair-or-better value, the
   usable regions without region flags (at least 2) are pooled: at frame times present in every
   pooled region, each channel divided by that region's window mean, averaged with equal weights.
@@ -435,11 +436,11 @@ value / share of shown values off by more than 5 BPM:
 | Noise sd per region | Before Patch D | Patch D      |
 | ------------------- | -------------- | ------------ |
 | 0.3                 | 78.3% / 0.0%   | 96.6% / 0.0% |
-| 0.6                 | 10.8% / 0.0%   | 30.4% / 0.0% |
-| 0.8                 | 3.6% / 4.2%    | 10.4% / 0.0% |
-| 1.0                 | 1.7% / 9.1%    | 4.4% / 1.1%  |
-| 1.3                 | 0.9% / 23.5%   | 1.4% / 3.7%  |
-| 0.5 / 1 / 1         | 12.4% / 0.4%   | 13.7% / 0.0% |
+| 0.6                 | 10.8% / 0.0%   | 30.1% / 0.0% |
+| 0.8                 | 3.6% / 4.2%    | 10.2% / 0.0% |
+| 1.0                 | 1.7% / 9.1%    | 4.3% / 1.2%  |
+| 1.3                 | 0.9% / 23.5%   | 1.3% / 3.8%  |
+| 0.5 / 1 / 1         | 12.4% / 0.4%   | 13.1% / 0.0% |
 | no pulse (sd 1)     | 0.8% / -       | 0.0% / -     |
 
 With no pulse there is no true rate, so every shown value is noise: before Patch D 0.8% of hops

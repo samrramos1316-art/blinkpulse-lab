@@ -296,6 +296,7 @@ export class PulseEstimator {
   }
 
   private miss(u: PulseUpdate): PulseUpdate {
+    this.smoother.interrupt();
     this.misses++;
     if (this.misses >= RESET_AFTER_HOPS) this.smoother.reset();
     return u;

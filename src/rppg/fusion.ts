@@ -135,6 +135,14 @@ export class BpmSmoother {
     return this.value;
   }
 
+  /**
+   * A hop without a usable estimate: a held estimate can no longer be confirmed by
+   * the NEXT one, so it is dropped ("two consecutive estimates", PROJECT_SPEC 5.4).
+   */
+  interrupt(): void {
+    this.pending = null;
+  }
+
   get value(): number | null {
     return this.accepted.length ? median(this.accepted) : null;
   }

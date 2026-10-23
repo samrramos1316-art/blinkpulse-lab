@@ -239,6 +239,18 @@ describe('BpmSmoother', () => {
     expect(s.push(72)).toBe(71);
   });
 
+  it('a hop without an estimate drops the held one: confirmation needs consecutive estimates', () => {
+    const s = new BpmSmoother();
+    expect(s.push(70)).toBeNull();
+    s.interrupt();
+    expect(s.push(72)).toBeNull(); // 70 was dropped: 72 now waits
+    expect(s.push(71)).toBe(71.5);
+    [71, 71, 71].forEach((v) => s.push(v));
+    expect(s.push(100)).toBe(71); // jump held
+    s.interrupt();
+    expect(s.push(101)).toBe(71); // not confirmed by a non-consecutive estimate: held again
+  });
+
   it('a jump > 12 BPM needs a second consistent estimate', () => {
     const s = new BpmSmoother();
     [70, 70, 70].forEach((v) => s.push(v));
