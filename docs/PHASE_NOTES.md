@@ -523,7 +523,18 @@ found and fixed; `npm run check` passes (532 tests).
 the theme changes; no page errors. **Not verified:** the study clock fix in a full live session
 (needs a 40-minute session with real blinks).
 
-Noted, not changed: a numeric trace stops adding rows after 30 minutes while the panel still says it
-is recording; the pulse table and Signal Lab keep showing the last estimate after Stop (the pulse
-card says "Not started"); the eye-closure ring holds 6 minutes only at up to about 66 frames per
-second.
+Noted, not changed at the time; fixed on 2026-10-22 (below).
+
+## Follow-up fixes (2026-10-22, author's request)
+
+The three items noted in the bug review. `npm run check` passes (535 tests); `npm run build`
+succeeds.
+
+| Problem                                                                                                        | Fix                                                                                                                                                                  |
+| -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A numeric trace stopped adding rows after 30 minutes while the panel still said it was recording.              | The recorder (now `src/app/traceRecorder.ts`) reports when the limit is reached; the recording ends and the save-or-discard prompt says why. Tested on the recorder. |
+| After Stop, the pulse table and Signal Lab kept showing the last estimate (the pulse card said "Not started"). | The pulse estimate is cleared when the camera stops.                                                                                                                 |
+| The eye-closure ring held 6 minutes (5-minute window plus the 1-minute late margin) only up to about 66 fps.   | Capacity doubled to 48 000 intervals (about 0.8 MB): 6 minutes up to about 133 fps. Tested at 120 fps; the test fails with the old capacity.                         |
+
+**Not verified:** the 30-minute limit in a live recording, and the cleared pulse view after Stop in a
+browser with a camera.

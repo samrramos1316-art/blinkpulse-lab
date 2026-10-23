@@ -48,8 +48,11 @@ const LONG_CLOSURE_MIN_MS = 500;
 const EVENT_MARGIN_MS = 60_000;
 /** Trend history kept (8 h of 10 s points). */
 const MAX_TREND = 2880;
-/** Ring capacity: more than 5 min + EVENT_MARGIN_MS of intervals at 60 fps. */
-const CAPACITY = 24_000;
+/**
+ * Ring capacity: more than 5 min + EVENT_MARGIN_MS of intervals at 120 fps (some
+ * phone cameras run above 60 fps; 24 000 held only 6 min up to about 66 fps).
+ */
+const CAPACITY = 48_000;
 
 export type Band = 'near' | 'somewhatAbove' | 'wellAbove';
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { RecordedTrace } from '../../app/useBlink.ts';
+import type { RecordedTrace } from '../../app/traceRecorder.ts';
 import type { PulseUpdate } from '../../rppg/pulseEstimator.ts';
 import { REGION_IDS, type RegionId } from '../../rppg/roi.ts';
 import { RECORD_COPY, REGION_LABEL } from '../copy.ts';
@@ -182,9 +182,7 @@ function TraceRecorder({ live, recording, start, stop, pending, clearPending }: 
   if (pending) {
     return (
       <div className="session__confirm" role="region" aria-label="Recorded numeric trace">
-        <p role="status">
-          {`The camera stopped, so recording ended after ${(pending.durationMs / 1000).toFixed(0)} s. Save the numbers?`}
-        </p>
+        <p role="status">{RECORD_COPY.ended(pending.endedBy, pending.durationMs)}</p>
         <div className="setup__actions">
           <button type="button" className="btn btn-ghost" onClick={clearPending}>
             Discard

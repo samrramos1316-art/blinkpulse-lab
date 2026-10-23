@@ -232,6 +232,17 @@ describe('Eye-Closure Index on synthetic sequences', () => {
     expect(tr.evaluate(LONG_WINDOW_MS, end - 1)).toEqual(onTime);
   });
 
+  it('keeps 5 min plus the late-evaluation margin at 120 fps', () => {
+    const tr = withBaseline();
+    const seg = { everyMs: 4000, blinkMs: 150 };
+    const end = BASE_END + LONG_WINDOW_MS;
+    run(tr, { fromMs: BASE_END, toMs: end, fps: 120, ...seg });
+    const onTime = tr.evaluate(LONG_WINDOW_MS, end - 1);
+    expect(onTime.ok).toBe(true);
+    run(tr, { fromMs: end, toMs: end + 60_000, fps: 120, ...seg });
+    expect(tr.evaluate(LONG_WINDOW_MS, end - 1)).toEqual(onTime);
+  });
+
   it('reports lost time by reason and the median frame rate', () => {
     const tr = withBaseline();
     run(tr, {

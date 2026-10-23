@@ -11,8 +11,7 @@ import type { Point } from '../blink/ear.ts';
 import { lockCameraAuto, type CameraLockResult } from '../capture/cameraLock.ts';
 import { median, percentile } from '../dsp/stats.ts';
 import type { BlinkEvent } from '../blink/blinkDetector.ts';
-import { PulseEstimator, type PulseFrame, type PulseUpdate } from '../rppg/pulseEstimator.ts';
-import { ESTIMATE_HEADER, FRAME_HEADER, estimateRow, frameRow } from '../rppg/traceCsv.ts';
+import { PulseEstimator, type PulseUpdate } from '../rppg/pulseEstimator.ts';
 import type { RegionId } from '../rppg/roi.ts';
 import { createLandmarker, type Delegate, type Landmarker } from '../vision/faceLandmarker.ts';
 import { headPoseFromMatrix } from '../vision/headPose.ts';
@@ -21,50 +20,13 @@ import { BlinkPipeline, type BlinkSnapshot } from './blinkPipeline.ts';
 import { PUBLISH_INTERVAL_MS } from './captureController.ts';
 import { buildPulseFrame } from './pulseFrame.ts';
 import { RoiSampler } from './roiSampler.ts';
+import { Recorder, type RecordedTrace } from './traceRecorder.ts';
 import type { Capture } from './useCapture.ts';
 
 export type LandmarkerStatus = 'idle' | 'loading' | 'ready' | 'error';
 
 /** Wait for auto-exposure to settle before locking it (starting value). */
 const LOCK_DELAY_MS = 3000;
-/** Longest numeric recording kept in memory (30 min). */
-export const MAX_RECORDING_MS = 30 * 60_000;
-
-/** A finished numeric trace (CSV text, numbers only). */
-export interface RecordedTrace {
-  frames: string;
-  estimates: string;
-  durationMs: number;
-}
-
-class Recorder {
-  readonly frames: string[] = [];
-  readonly estimates: string[] = [];
-  private offset: number | null = null;
-  private firstMs: number | null = null;
-  private lastMs = 0;
-
-  add(frame: PulseFrame, update: PulseUpdate | null): void {
-    if (this.firstMs !== null && frame.tMs - this.firstMs > MAX_RECORDING_MS) return;
-    this.firstMs ??= frame.tMs;
-    this.offset ??= Date.now() - frame.tMs;
-    this.lastMs = frame.tMs;
-    this.frames.push(frameRow(frame));
-    if (update && update.status !== 'warmingUp') {
-      this.estimates.push(estimateRow(update, update.tMs + this.offset));
-    }
-  }
-
-  finish(): RecordedTrace {
-    const meta = `# wall_offset_ms=${String(Math.round(this.offset ?? 0))}`;
-    return {
-      frames: `${[meta, FRAME_HEADER.join(','), ...this.frames].join('\n')}\n`,
-      estimates: `${[ESTIMATE_HEADER.join(','), ...this.estimates].join('\n')}\n`,
-      durationMs: this.firstMs === null ? 0 : this.lastMs - this.firstMs,
-    };
-  }
-}
-
 /** What the preview overlay draws for the latest frame (pixel coordinates, unmirrored). */
 export interface OverlayFrame {
   width: number;
@@ -271,6 +233,12 @@ export function useBlink(capture: Capture): Blink {
         processing: med === null || p95 === null ? null : { median: med, p95 },
       });
       setPulse(state.pulse.latest);
+      // The 30-minute limit ends the recording; offer it like a camera stop.
+      if (state.recorder?.full) {
+        setPendingTrace(state.recorder.finish('limit'));
+        state.setRecorder(null);
+        setRecording(false);
+      }
     }, PUBLISH_INTERVAL_MS);
     // Lock exposure / white balance once auto-exposure has had time to settle.
     const lockId = window.setTimeout(() => {
@@ -289,11 +257,13 @@ export function useBlink(capture: Capture): Blink {
       state.setOverlay(null);
       // Camera stopped while recording: keep the trace for the user to save.
       if (state.recorder) {
-        setPendingTrace(state.recorder.finish());
+        setPendingTrace(state.recorder.finish('cameraStopped'));
         state.setRecorder(null);
         setRecording(false);
       }
       setCameraLock(null);
+      // The pulse table and Signal Lab show nothing once the camera stops, like the card.
+      setPulse(null);
       setSnapshot(pipeline.snapshot());
     };
   }, [running, pipeline, state, getVideo]);
@@ -330,7 +300,7 @@ export function useBlink(capture: Capture): Blink {
       const r = state.recorder;
       state.setRecorder(null);
       setRecording(false);
-      return r ? r.finish() : null;
+      return r ? r.finish('stopped') : null;
     },
     calibrate: () => {
       pipeline.startCalibration();

@@ -4,6 +4,7 @@
  * Claims-governed wording (disclaimer, indicator) lives in strings.ts instead.
  */
 
+import type { TraceEnd } from '../app/traceRecorder.ts';
 import type { CameraErrorKind } from '../capture/cameraErrors.ts';
 
 export const CAMERA_ERROR: Record<CameraErrorKind, string> = {
@@ -129,6 +130,8 @@ export const RECORD_COPY = {
   confirm: 'Start recording',
   stop: 'Stop and save',
   active: 'Recording numeric trace.',
+  ended: (why: TraceEnd, durationMs: number) =>
+    `${why === 'limit' ? 'Recording reached the 30-minute limit' : 'The camera stopped, so recording ended'} after ${(durationMs / 1000).toFixed(0)} s. Save the numbers?`,
 } as const;
 
 /**
