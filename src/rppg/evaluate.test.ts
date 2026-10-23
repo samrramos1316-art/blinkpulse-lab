@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { synthRgb } from '../../tools/synth.ts';
 import { agreement, referenceAt } from './agreement.ts';
-import { evaluateTrace, formatEval } from './evaluate.ts';
+import { BEFORE_PATCH_D, evaluateTrace, formatEval } from './evaluate.ts';
 import type { PulseFrame, PulseUpdate } from './pulseEstimator.ts';
 import {
   ESTIMATE_HEADER,
@@ -81,6 +81,7 @@ describe('trace CSV', () => {
       status: 'ok',
       regions: [],
       fusion: null,
+      pooled: null,
       globalFlags: ['motion'],
       displayBpm: 70,
       level: 'fair',
@@ -110,12 +111,19 @@ describe('evaluateTrace replays the app pipeline', () => {
     { tMs: 40_000, bpm: 68 },
   ];
 
-  it('fused: every hop shown, MAE < 1 BPM on a clean synthetic trace', () => {
+  it('fused: every hop after the confirming one shown, MAE < 1 BPM on a clean synthetic trace', () => {
     const r = evaluateTrace(frames, ref, 'fused', 60_000);
     expect(r.hops).toBeGreaterThanOrEqual(29);
-    expect(r.shown).toBe(r.hops);
+    expect(r.shown).toBe(r.hops - 1);
     expect(r.shownAgreement.mae).toBeLessThan(1);
     expect(formatEval(r)).toContain('Mode: fused');
+  });
+
+  it('the before-Patch-D variant shows the first estimate at once', () => {
+    const before = { name: 'before Patch D', options: BEFORE_PATCH_D };
+    const r = evaluateTrace(frames, ref, 'fused', 60_000, before);
+    expect(r.shown).toBe(r.hops);
+    expect(formatEval(r)).toContain('Mode: fused (before Patch D)');
   });
 
   it('single-region modes use only that region (low coverage region shows nothing)', () => {

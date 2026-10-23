@@ -229,6 +229,16 @@ describe('BpmSmoother', () => {
     expect(s.value).toBe(72);
   });
 
+  it('the first estimate waits for a consistent second one (Patch D)', () => {
+    const s = new BpmSmoother();
+    expect(s.push(70)).toBeNull();
+    expect(s.push(95)).toBeNull(); // not within 6 BPM of 70: replaces it
+    expect(s.push(98)).toBe(96.5); // consistent with 95: both accepted
+    s.reset();
+    expect(s.push(70)).toBeNull();
+    expect(s.push(72)).toBe(71);
+  });
+
   it('a jump > 12 BPM needs a second consistent estimate', () => {
     const s = new BpmSmoother();
     [70, 70, 70].forEach((v) => s.push(v));

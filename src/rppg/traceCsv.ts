@@ -122,6 +122,11 @@ export const ESTIMATE_HEADER = [
   'agreement_bpm',
   ...REGION_IDS.flatMap((id) => [`${id}_bpm`, `${id}_sqi`, `${id}_level`]),
   'flags',
+  // Pooled-region fallback (Patch D); pooled_used = 1 when the shown value came from it.
+  'pooled_bpm',
+  'pooled_sqi',
+  'pooled_level',
+  'pooled_used',
 ];
 
 /** `wallTimeMs` NaN leaves the cell empty (no wall clock, e.g. a video file). */
@@ -140,6 +145,8 @@ export function estimateRow(u: PulseUpdate, wallTimeMs: number): string {
     cells.push(num(r?.bpm, 2), num(r?.sqi, 3), r?.level ?? '');
   }
   cells.push(u.globalFlags.join(' '));
+  const p = u.pooled;
+  cells.push(num(p?.bpm, 2), num(p?.sqi, 3), p?.level ?? '', p ? (p.used ? '1' : '0') : '');
   return cells.join(',');
 }
 

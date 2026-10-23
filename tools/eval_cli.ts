@@ -5,6 +5,9 @@
  *
  *   npm run eval -- frames.csv reference.csv [--mode fused|forehead|leftCheek|rightCheek|all]
  *
+ * The fused mode is reported twice: as the app runs it, and as it ran before
+ * SPEC_AMENDMENT_03 Patch D (no pooled fallback, first estimate shown at once).
+ *
  * frames.csv: exported by the app ("Record numeric trace") or produced by a dataset
  *   extraction tool in the same format (src/rppg/traceCsv.ts).
  * reference.csv: `t_ms,bpm` in the trace's time base, or `wall_time_ms,bpm` (the
@@ -12,7 +15,7 @@
  */
 
 import { readFileSync } from 'node:fs';
-import { evaluateTrace, formatEval } from '../src/rppg/evaluate.ts';
+import { BEFORE_PATCH_D, evaluateTrace, formatEval } from '../src/rppg/evaluate.ts';
 import { REGION_IDS } from '../src/rppg/roi.ts';
 import { parseFramesCsv, parseReferenceCsv } from '../src/rppg/traceCsv.ts';
 
@@ -52,4 +55,10 @@ const run: Mode[] = modeArg === 'all' ? [...modes] : [modeArg as Mode];
 for (const mode of run) {
   console.log('');
   console.log(formatEval(evaluateTrace(frames, readings, mode)));
+  if (mode === 'fused') {
+    // V2b also reports the pipeline before Patch D (SPEC_AMENDMENT_03).
+    const before = { name: 'before Patch D', options: BEFORE_PATCH_D };
+    console.log('');
+    console.log(formatEval(evaluateTrace(frames, readings, mode, undefined, before)));
+  }
 }

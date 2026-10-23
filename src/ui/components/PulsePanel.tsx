@@ -12,7 +12,7 @@ import {
   spectrumSpec,
   waveformSpec,
 } from '../plot/pulsePlots.ts';
-import { combinedRow, regionRow, showsBpm } from '../pulseDisplay.ts';
+import { combinedRow, pooledRow, regionRow, showsBpm } from '../pulseDisplay.ts';
 import { Chart } from './Chart.tsx';
 
 const FILTER_SPEC = filterSpec();
@@ -46,8 +46,9 @@ export function PulsePanel({
   return (
     <div className="pulse">
       <p className="session__intro">
-        Pulse rate is estimated separately from three skin regions and then combined. Each estimate
-        uses the last 10 seconds and updates once per second.
+        Pulse rate is estimated separately from three skin regions and then combined. When no region
+        is clear enough on its own, the regions are pooled into one signal and tried again. Each
+        estimate uses the last 10 seconds and updates once per second.
       </p>
 
       <div className="session__scroll">
@@ -79,13 +80,23 @@ export function PulsePanel({
               </tr>
             )}
           </tbody>
-          {pulse?.fusion?.bpm != null ? (
+          {pulse?.fusion?.bpm != null || pulse?.pooled ? (
             <tfoot>
-              <tr>
-                <th scope="row">Combined</th>
-                <td className="tabular">{combinedRow(pulse.fusion).bpm}</td>
-                <td colSpan={2}>{combinedRow(pulse.fusion).note}</td>
-              </tr>
+              {pulse.fusion?.bpm != null ? (
+                <tr>
+                  <th scope="row">Combined</th>
+                  <td className="tabular">{combinedRow(pulse.fusion).bpm}</td>
+                  <td colSpan={2}>{combinedRow(pulse.fusion).note}</td>
+                </tr>
+              ) : null}
+              {pulse.pooled ? (
+                <tr>
+                  <th scope="row">Regions pooled</th>
+                  <td className="tabular">{pooledRow(pulse.pooled).bpm}</td>
+                  <td>{pooledRow(pulse.pooled).quality}</td>
+                  <td>{pooledRow(pulse.pooled).note}</td>
+                </tr>
+              ) : null}
             </tfoot>
           ) : null}
         </table>

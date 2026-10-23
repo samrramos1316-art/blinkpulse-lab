@@ -4,7 +4,9 @@
  * browser, or read from a recorded trace by tools/eval_cli.ts).
  *
  * Every HOP_MS, once WINDOW_MS of data exist, each region's window is estimated
- * independently, quality-assessed, and fused; the fused value is smoothed.
+ * independently, quality-assessed, and fused; the fused value is smoothed. When the
+ * fusion has no Fair-or-better value, the usable regions are pooled into one trace
+ * and estimated again (pooled.ts, SPEC_AMENDMENT_03 Patch D), capped at Fair.
  */
 
 import type { Point } from '../blink/ear.ts';
@@ -14,6 +16,7 @@ import {
   estimateWindow,
   HOP_MS,
   WINDOW_MS,
+  type TraceWindow,
   type WindowEstimate,
   type WindowFailure,
 } from './hrEstimator.ts';
@@ -28,6 +31,7 @@ import {
   type PulseFlag,
   type QualityLevel,
 } from './quality.ts';
+import { poolWindows, pooledStats } from './pooled.ts';
 import { RgbTrace, type WindowStats } from './rgbTrace.ts';
 import { REGION_IDS, type RegionId, type RoiStats } from './roi.ts';
 
@@ -53,16 +57,34 @@ export interface RegionReport {
   estimate: WindowEstimate | null;
 }
 
-export type PulseStatus = 'warmingUp' | 'ok' | 'notEnoughSignal' | 'fpsTooLow' | 'gap';
+/** The pooled-region attempt of one hop (Patch D). */
+export interface PooledReport {
+  /** Regions pooled: window usable, no region flag. */
+  regions: RegionId[];
+  bpm: number | null;
+  sqi: number | null;
+  /** Capped at Fair. */
+  level: QualityLevel | null;
+  flags: PulseFlag[];
+  /** The shown value came from this pooled estimate. */
+  used: boolean;
+  estimate: WindowEstimate | null;
+}
+
+/** 'confirming': a first estimate passed the quality gate and waits for the next to agree. */
+export type PulseStatus =
+  'warmingUp' | 'ok' | 'confirming' | 'notEnoughSignal' | 'fpsTooLow' | 'gap';
 
 export interface PulseUpdate {
   tMs: number;
   status: PulseStatus;
   regions: RegionReport[];
   fusion: FusionResult | null;
+  /** Pooled-region attempt, made only when the fusion has no Fair-or-better value. */
+  pooled: PooledReport | null;
   /** Window-level flags shared by all regions. */
   globalFlags: GlobalFlag[];
-  /** Smoothed fused BPM, only when the fused quality is at least Fair. */
+  /** Smoothed BPM (fused, or pooled), only when its quality is at least Fair. */
   displayBpm: number | null;
   level: QualityLevel | null;
   /** Unsmoothed fused estimate of this hop (for logging / validation). */
@@ -73,17 +95,30 @@ export interface PulseUpdate {
 /** Consecutive hops without a shown value before the smoother forgets its history. */
 export const RESET_AFTER_HOPS = 5;
 
+export interface PulseEstimatorOptions {
+  /** Pooled-region fallback (Patch D). Default true; false for comparisons. */
+  pooling?: boolean;
+  /** Confirm the first estimate before showing it (Patch D). Default true. */
+  confirmFirst?: boolean;
+}
+
 export class PulseEstimator {
+  private readonly pooling: boolean;
   private readonly traces = new Map<RegionId, RgbTrace>(
     REGION_IDS.map((id) => [id, new RgbTrace()]),
   );
   private speeds: { tMs: number; v: number }[] = [];
   private prevMotion: { tMs: number; p: Point; iod: number } | null = null;
-  private readonly smoother = new BpmSmoother();
+  private readonly smoother: BpmSmoother;
   private firstMs: number | null = null;
   private lastHopMs = -Infinity;
   private misses = 0;
   private last: PulseUpdate | null = null;
+
+  constructor(options: PulseEstimatorOptions = {}) {
+    this.pooling = options.pooling ?? true;
+    this.smoother = new BpmSmoother(options.confirmFirst ?? true);
+  }
 
   push(frame: PulseFrame): PulseUpdate | null {
     this.firstMs ??= frame.tMs;
@@ -140,6 +175,7 @@ export class PulseEstimator {
       status: 'notEnoughSignal',
       regions: [],
       fusion: null,
+      pooled: null,
       globalFlags: [],
       displayBpm: null,
       level: null,
@@ -168,6 +204,7 @@ export class PulseEstimator {
     const moving = motionFlag(this.speeds.filter((s) => s.tMs >= tMs - WINDOW_MS).map((s) => s.v));
     const reports: RegionReport[] = [];
     const statsList: WindowStats[] = [];
+    const poolable: { id: RegionId; window: TraceWindow; stats: WindowStats }[] = [];
     let anyGap = false;
     let global: GlobalFlag[] = [];
     for (const id of REGION_IDS) {
@@ -184,6 +221,7 @@ export class PulseEstimator {
         reports.push({ ...failed(id, null), flags: [...regionFlags(w.stats), ...g] });
         continue;
       }
+      if (regionFlags(w.stats).length === 0) poolable.push({ id, ...w });
       const est = estimateWindow(w.window);
       if (!est.ok) {
         reports.push(failed(id, est.reason));
@@ -209,6 +247,7 @@ export class PulseEstimator {
         ...base,
         status: 'fpsTooLow',
         fusion: null,
+        pooled: null,
         displayBpm: null,
         level: null,
         rawBpm: null,
@@ -226,20 +265,34 @@ export class PulseEstimator {
         ),
       })),
     );
-    if (fusion.bpm === null || !atLeastFair(fusion.level)) {
-      const status: PulseStatus = statsList.length === 0 && anyGap ? 'gap' : 'notEnoughSignal';
-      return this.miss({
-        ...base,
-        status,
-        fusion,
-        displayBpm: null,
-        level: fusion.level,
-        rawBpm: fusion.bpm,
-      });
+    if (fusion.bpm !== null && atLeastFair(fusion.level)) {
+      return this.show({ ...base, fusion, pooled: null }, fusion.bpm, fusion.level);
     }
+    const pooled = this.pooling ? poolRegions(poolable, global) : null;
+    if (pooled?.used && pooled.bpm !== null && pooled.level !== null) {
+      return this.show({ ...base, fusion, pooled }, pooled.bpm, pooled.level);
+    }
+    const status: PulseStatus = statsList.length === 0 && anyGap ? 'gap' : 'notEnoughSignal';
+    return this.miss({
+      ...base,
+      status,
+      fusion,
+      pooled,
+      displayBpm: null,
+      level: fusion.level,
+      rawBpm: fusion.bpm,
+    });
+  }
+
+  private show(
+    u: Omit<PulseUpdate, 'status' | 'displayBpm' | 'level' | 'rawBpm'>,
+    bpm: number,
+    level: QualityLevel,
+  ): PulseUpdate {
     this.misses = 0;
-    const displayBpm = this.smoother.push(fusion.bpm);
-    return { ...base, status: 'ok', fusion, displayBpm, level: fusion.level, rawBpm: fusion.bpm };
+    const displayBpm = this.smoother.push(bpm);
+    if (displayBpm === null) return { ...u, status: 'confirming', displayBpm, level, rawBpm: bpm };
+    return { ...u, status: 'ok', displayBpm, level, rawBpm: bpm };
   }
 
   private miss(u: PulseUpdate): PulseUpdate {
@@ -259,5 +312,41 @@ function failed(id: RegionId, failure: WindowFailure | 'gap' | 'tooShort' | null
     flags: [],
     failure: failure === 'gap' || failure === 'tooShort' || failure === 'noPeak' ? failure : null,
     estimate: null,
+  };
+}
+
+/**
+ * Patch D: pool the usable regions and run the same chain and quality rules on the
+ * pooled trace. The level is capped at Fair; a value is used only at Fair.
+ */
+export function poolRegions(
+  regions: readonly { id: RegionId; window: TraceWindow; stats: WindowStats }[],
+  global: readonly GlobalFlag[],
+): PooledReport | null {
+  const window = poolWindows(regions.map((r) => r.window));
+  if (!window) return null;
+  const ids = regions.map((r) => r.id);
+  const none: PooledReport = {
+    regions: ids,
+    bpm: null,
+    sqi: null,
+    level: null,
+    flags: [],
+    used: false,
+    estimate: null,
+  };
+  if (window.tMs.length < 2) return none;
+  const est = estimateWindow(window);
+  if (!est.ok) return none;
+  const q = regionQuality(est, pooledStats(regions.map((r) => r.stats)), global);
+  const level: QualityLevel = q.level === 'good' ? 'fair' : q.level;
+  return {
+    regions: ids,
+    bpm: est.bpm,
+    sqi: est.sqi,
+    level,
+    flags: q.flags,
+    used: atLeastFair(level),
+    estimate: est,
   };
 }

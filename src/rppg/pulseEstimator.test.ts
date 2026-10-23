@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { synthRgb, type SynthRgbOptions } from '../../tools/synth.ts';
 import { median } from '../dsp/stats.ts';
-import { PulseEstimator, type PulseFrame, type PulseUpdate } from './pulseEstimator.ts';
+import {
+  PulseEstimator,
+  type PulseEstimatorOptions,
+  type PulseFrame,
+  type PulseUpdate,
+} from './pulseEstimator.ts';
 import type { RegionId, RoiStats } from './roi.ts';
 
 type RegionSpec = Partial<SynthRgbOptions> & { bpm: number };
@@ -24,6 +29,7 @@ function simulate(
   regions: Record<RegionId, RegionSpec>,
   durationMs = 20_000,
   edit?: (f: PulseFrame) => PulseFrame,
+  options?: PulseEstimatorOptions,
 ): PulseUpdate[] {
   const traces = Object.fromEntries(
     Object.entries(regions).map(([id, spec], k) => [
@@ -31,7 +37,7 @@ function simulate(
       synthRgb({ durationMs, fps: 30, amplitude: 0.005, seed: 11 + k, ...spec }),
     ]),
   ) as Record<RegionId, ReturnType<typeof synthRgb>>;
-  const est = new PulseEstimator();
+  const est = new PulseEstimator(options);
   const out: PulseUpdate[] = [];
   const n = traces.forehead.tMs.length;
   for (let i = 0; i < n; i++) {
@@ -132,7 +138,10 @@ describe('PulseEstimator: gating and smoothing', () => {
       expect((hops[i] as number) - (hops[i - 1] as number)).toBeGreaterThanOrEqual(1000);
       expect((hops[i] as number) - (hops[i - 1] as number)).toBeLessThan(1040);
     }
-    expect(estimated(us).every((u) => u.status === 'ok' && u.level === 'good')).toBe(true);
+    // The first estimate waits for the next one to agree (Patch D); then every hop shows.
+    const [first, ...rest] = estimated(us);
+    expect(first).toMatchObject({ status: 'confirming', displayBpm: null, level: 'good' });
+    expect(rest.every((u) => u.status === 'ok' && u.level === 'good')).toBe(true);
     expect(Math.abs((estimated(us).at(-1)?.displayBpm ?? 0) - 66)).toBeLessThan(1);
   });
 
@@ -183,5 +192,58 @@ describe('PulseEstimator: gating and smoothing', () => {
     expect(last).not.toBeNull();
     expect((last as PulseUpdate | null)?.status).toBe('fpsTooLow');
     expect((last as PulseUpdate | null)?.displayBpm).toBeNull();
+  });
+});
+
+describe('PulseEstimator: pooled-region fallback (Patch D)', () => {
+  // Same pulse in every region, independent noise: each region alone is mostly Poor.
+  const weak = { bpm: 72, amplitude: 0.004, noiseSd: 0.6 };
+  const regions = { forehead: weak, leftCheek: weak, rightCheek: weak };
+
+  it('pools the regions when none is clear enough, and the pooled values are accurate', () => {
+    const on = estimated(simulate(regions, 40_000));
+    const off = estimated(simulate(regions, 40_000, undefined, { pooling: false }));
+    const shown = (us: PulseUpdate[]) => us.filter((u) => u.displayBpm !== null);
+    const pooled = on.filter((u) => u.pooled?.used);
+    expect(pooled.length).toBeGreaterThanOrEqual(5);
+    expect(shown(on).length).toBeGreaterThan(2 * shown(off).length);
+    for (const u of shown(on)) expect(Math.abs((u.displayBpm as number) - 72)).toBeLessThan(3);
+    for (const u of pooled) {
+      expect(u.level).toBe('fair'); // capped at Fair
+      expect(u.pooled?.regions).toHaveLength(3);
+      expect(u.fusion?.bpm == null || u.fusion.level === 'poor').toBe(true);
+    }
+    expect(off.every((u) => u.pooled === null)).toBe(true);
+  });
+
+  it('is not tried when the regions already give a Fair-or-better value', () => {
+    const us = estimated(
+      simulate({ forehead: { bpm: 80 }, leftCheek: { bpm: 80 }, rightCheek: { bpm: 80 } }),
+    );
+    expect(us.every((u) => u.pooled === null)).toBe(true);
+  });
+
+  it('noise only in every region: pooled, never used, nothing shown', () => {
+    const noise = { bpm: 72, amplitude: 0, noiseSd: 1 };
+    const us = estimated(
+      simulate({ forehead: noise, leftCheek: noise, rightCheek: noise }, 60_000),
+    );
+    expect(us.length).toBeGreaterThanOrEqual(49);
+    expect(us.every((u) => u.displayBpm === null && u.pooled?.used !== true)).toBe(true);
+  });
+
+  it('a region with a region flag is not pooled', () => {
+    const us = estimated(
+      simulate(regions, 30_000, (f) => ({
+        ...f,
+        regions: {
+          ...f.regions,
+          rightCheek: f.regions.rightCheek ? { ...f.regions.rightCheek, coverage: 0.3 } : null,
+        },
+      })),
+    );
+    const tried = us.filter((u) => u.pooled !== null);
+    expect(tried.length).toBeGreaterThan(0);
+    for (const u of tried) expect(u.pooled?.regions).toEqual(['forehead', 'leftCheek']);
   });
 });

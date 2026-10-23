@@ -102,8 +102,12 @@ export const PULSE_COPY = {
   fpsTooLow:
     'The camera is too slow for a pulse reading (under 15 frames per second). More light often helps.',
   notEnoughSignal: 'Not enough signal. Hold still and face the light.',
+  confirming: 'Checking the reading... hold still.',
   singleRegion: 'Based on one skin region only.',
   regionsDisagree: 'Regions disagree.',
+  pooled: 'Weak signal in each region, so the regions were pooled into one estimate.',
+  pooledUsed: 'Used: no single region was clear enough on its own.',
+  pooledUnused: 'Pooling the regions did not give a clear signal either.',
 } as const;
 
 /** One sentence per quality flag, most important first (used for the main reason). */
@@ -179,7 +183,7 @@ export const ABOUT_COPY = {
   methods: [
     'Face tracking: MediaPipe Face Landmarker (a pre-trained model, run on this device) finds 478 points on the face in every video frame. Everything after that is written for this project.',
     'Blinks: the eye aspect ratio compares the height of each eye with its width. A 10-second calibration finds your open-eye level, and a blink is timed from the moment the eye drops below 70% of that level until it rises above 80% again.',
-    'Pulse rate: the average colour of three skin regions (forehead and both cheeks) changes very slightly with each heartbeat. The POS method combines the colours, a band-pass filter keeps 42-180 beats per minute, and the strongest rhythm in a 10-second window gives the estimate. Regions with good signal are combined.',
+    'Pulse rate: the average colour of three skin regions (forehead and both cheeks) changes very slightly with each heartbeat. The POS method combines the colours, a band-pass filter keeps 42-180 beats per minute, and the strongest rhythm in a 10-second window gives the estimate. Regions with good signal are combined; when none is clear enough, the regions are pooled into one signal and tried again. A first estimate is shown only once the next one agrees with it.',
     'Eye-closure indicator: compares how much your eyes are closed, how often they close for half a second or more, and how long your blinks last with your own baseline from earlier in the same session.',
   ],
   limitations: [

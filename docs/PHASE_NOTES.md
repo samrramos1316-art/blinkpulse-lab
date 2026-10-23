@@ -560,3 +560,22 @@ apply on the next deploy) and the PVT on a real touch screen.
 Checked and found correct: the face overlay's mapping for the cropped portrait preview, the
 landmarker's increasing timestamps when a tool analyses a video again, the Explorer overlay, camera
 release on route change and page hide, and the wake lock.
+
+## Pulse at lower signal quality (2026-10-23, author's request)
+
+The author asked to refine the pulse estimate under lower quality. The "Fair or better" display
+rule is unchanged: the work makes weaker signals give correct values instead of showing more
+numbers. `npm run check` passes (552 tests).
+
+| Change                                                                                                                                                                                                                                                                                                                     | Evidence                                                                                                                                                                                                                                                                                             |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Bug: every skipped camera frame blanked the pulse for 10 s.** The frame clock flags short breaks (one skipped frame, an interval over 2.5x the median) for blink timing, and the pulse path treated each as a data break. PROJECT_SPEC 5.4 invalidates windows only across breaks over 250 ms. Phones skip frames often. | Fixed in `pulseGapBefore` (tested with the real FrameClock: before, nothing shown; after, every value within 2 BPM). Browser, 72 BPM synthetic face, headless Chrome dropping 57-130 frames per 30 s: 4 of 4 runs showed 72 BPM, Good; the deployed build 0 of 3, this build without the fix 3 of 6. |
+| **SPEC_AMENDMENT_03 D1: pooled-region fallback.** When no region is clear enough, the usable regions are pooled and run through the same chain and quality rules, capped at Fair.                                                                                                                                          | `npm run bench:pulse` (n = 1985 hops per row): at noise sd 1.0 per region, values shown in 4.4% of hops instead of 1.7%, with 1.1% instead of 9.1% off by more than 5 BPM.                                                                                                                           |
+| **SPEC_AMENDMENT_03 D2: confirm the first value.** After a pause, a value is shown only when the next estimate agrees within 6 BPM.                                                                                                                                                                                        | With no pulse, 0.8% of hops showed a value before, 0% after. Costs one second before the first value.                                                                                                                                                                                                |
+
+Also: the estimates CSV has `pooled_*` columns; `npm run eval` reports the fused result both with
+and before Patch D for V2b; the About text and the Pulse tab say when regions are pooled.
+
+**Not verified:** any of this on real faces (V2b); the pooled fallback in the browser (the
+synthetic face video is too clean to trigger it; it is tested through the same PulseEstimator in
+Node). **Needs the author:** review SPEC_AMENDMENT_03 before V2b starts.

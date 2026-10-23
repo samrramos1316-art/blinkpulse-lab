@@ -353,7 +353,10 @@ not used.
 ### Chain (per region, every 1 s, 10 s window)
 
 1. Resample to 30 Hz (bin-averaging from >= 45 fps, else linear). A hole > 250 ms, a FrameClock
-   gap flag, or data missing at either end invalidates the window.
+   break of more than 250 ms, a hidden page or a change of timestamp source, or data missing at
+   either end invalidates the window. Shorter FrameClock breaks (a skipped frame, an interval over
+   2.5x the median) are bridged by resampling (`pulseGapBefore`, fixed 2026-10-23: before, every
+   skipped frame invalidated all regions for 10 s).
 2. POS exactly as in PROJECT_SPEC 5.4 (window round(1.6 fs) = 48 samples, overlap-add).
 3. Butterworth band-pass 0.7-3.0 Hz (the Phase 1 design: -3.01 dB at both cut-offs, -67.7 dB at
    0.1 Hz, -42.7 dB at 8 Hz, single pass), applied with `filtfilt`.
@@ -387,7 +390,14 @@ not used.
   A value is shown only at Fair or better.
 - Smoothing: median of the last 5 accepted estimates; an estimate > 12 BPM from that median is
   held and accepted (with the held one) only if the next is within 6 BPM of it (the 6 BPM is a
-  starting value). After 5 hops without a shown value the history is cleared.
+  starting value). After 5 hops without a shown value the history is cleared. With no history
+  (start, or after that reset) the first estimate is shown only when the next agrees within
+  6 BPM (SPEC_AMENDMENT_03 D2).
+- Pooled-region fallback (SPEC_AMENDMENT_03 D1): when the fusion has no Fair-or-better value, the
+  usable regions without region flags (at least 2) are pooled: at frame times present in every
+  pooled region, each channel divided by that region's window mean, averaged with equal weights.
+  The pooled trace goes through the same chain and quality rules, capped at Fair, and is used only
+  at Fair. The UI and the estimates CSV (`pooled_*` columns) say when it was used.
 
 ### Camera controls
 
@@ -415,6 +425,29 @@ dropped frames.
   error; the noise-only region excluded); two regions at 70 BPM plus one at 115 BPM (fused within
   2 BPM, disagreement flagged); all regions noise only ("-" with a reason); a frame gap invalidates
   every region for 10 s.
+
+### Lower signal quality (SPEC_AMENDMENT_03)
+
+`npm run bench:pulse`: 60 s three-region streams, pulse 0.4% in green, rates 55/72/95/130/165 BPM x
+8 seeds, independent Gaussian noise per region (n = 1985 hops per row). Share of hops with a shown
+value / share of shown values off by more than 5 BPM:
+
+| Noise sd per region | Before Patch D | Patch D      |
+| ------------------- | -------------- | ------------ |
+| 0.3                 | 78.3% / 0.0%   | 96.6% / 0.0% |
+| 0.6                 | 10.8% / 0.0%   | 30.4% / 0.0% |
+| 0.8                 | 3.6% / 4.2%    | 10.4% / 0.0% |
+| 1.0                 | 1.7% / 9.1%    | 4.4% / 1.1%  |
+| 1.3                 | 0.9% / 23.5%   | 1.4% / 3.7%  |
+| 0.5 / 1 / 1         | 12.4% / 0.4%   | 13.7% / 0.0% |
+| no pulse (sd 1)     | 0.8% / -       | 0.0% / -     |
+
+With no pulse there is no true rate, so every shown value is noise: before Patch D 0.8% of hops
+showed one, with Patch D none did. The full table, including D2
+alone, is in `SPEC_AMENDMENT_03.md`. Timing in Node with a pooled attempt in most hops: 2.13 ms
+median, 2.98 ms p95, 3.58 ms max per hop (n = 201), similar to the three-region estimate alone.
+Identical pulse and independent noise per region is the most favourable case for pooling; real
+faces are measured only by V2b.
 
 ### End-to-end browser test (synthetic face)
 

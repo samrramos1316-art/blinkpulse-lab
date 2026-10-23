@@ -4,6 +4,8 @@
 
 > **AMENDED:** `SPEC_AMENDMENT_02.md` adds the visual design and ease-of-use requirements (Calm minimal style, design tokens, first-run flow). It never overrides a product, privacy, wording, or accessibility rule.
 
+> **AMENDED:** `SPEC_AMENDMENT_03.md` (Patch D) adds a pooled-region fallback and first-value confirmation to the pulse estimate. It never lowers the "Fair or better" display rule.
+
 Read `PROJECT_SPEC.md` first. It is the source of truth. These rules apply to every session.
 
 ## Workflow

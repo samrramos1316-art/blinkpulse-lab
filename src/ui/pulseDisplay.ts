@@ -5,7 +5,7 @@
 
 import type { FaceStatus } from '../app/blinkPipeline.ts';
 import type { FusionResult } from '../rppg/fusion.ts';
-import type { PulseUpdate, RegionReport } from '../rppg/pulseEstimator.ts';
+import type { PooledReport, PulseUpdate, RegionReport } from '../rppg/pulseEstimator.ts';
 import type { PulseFlag, QualityLevel } from '../rppg/quality.ts';
 import { PULSE_COPY, PULSE_FLAG_TEXT, REGION_LABEL } from './copy.ts';
 import { METRIC } from './strings.ts';
@@ -56,11 +56,17 @@ export function pulseCard(
   }
   if (p.status === 'ok' && p.displayBpm !== null && p.level !== null) {
     const notes: string[] = [];
-    if (p.fusion?.singleRegion) notes.push(PULSE_COPY.singleRegion);
-    if (p.fusion?.regionsDisagree) notes.push(PULSE_COPY.regionsDisagree);
+    if (p.pooled?.used) notes.push(PULSE_COPY.pooled);
+    else {
+      if (p.fusion?.singleRegion) notes.push(PULSE_COPY.singleRegion);
+      if (p.fusion?.regionsDisagree) notes.push(PULSE_COPY.regionsDisagree);
+    }
     const flag = mainFlagText(p.globalFlags);
     if (flag) notes.push(flag);
     return { value: p.displayBpm.toFixed(0), status: notes.join(' '), level: p.level };
+  }
+  if (p.status === 'confirming') {
+    return { value: '-', status: PULSE_COPY.confirming, level: p.level };
   }
   const reason =
     p.status === 'fpsTooLow'
@@ -118,6 +124,15 @@ export function combinedRow(f: FusionResult): { bpm: string; note: string } {
     return { bpm: '-', note: `${agreement} ${qualityText('poor')}.` };
   }
   return { bpm: f.bpm.toFixed(0), note: agreement };
+}
+
+/** The pooled-regions row of the region table (Patch D): a value only when it was used. */
+export function pooledRow(p: PooledReport): { bpm: string; quality: string; note: string } {
+  return {
+    bpm: p.used && p.bpm !== null ? p.bpm.toFixed(0) : '-',
+    quality: p.level ? qualityText(p.level) : '-',
+    note: p.used ? PULSE_COPY.pooledUsed : PULSE_COPY.pooledUnused,
+  };
 }
 
 /** A region's pulse rate may be shown (quality at least Fair). */

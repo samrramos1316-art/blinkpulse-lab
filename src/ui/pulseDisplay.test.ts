@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { FusionResult } from '../rppg/fusion.ts';
-import type { PulseUpdate, RegionReport } from '../rppg/pulseEstimator.ts';
+import type { PooledReport, PulseUpdate, RegionReport } from '../rppg/pulseEstimator.ts';
 import { PULSE_COPY, PULSE_FLAG_TEXT } from './copy.ts';
-import { combinedRow, labSummary, mainFlagText, pulseCard, regionRow } from './pulseDisplay.ts';
+import {
+  combinedRow,
+  labSummary,
+  mainFlagText,
+  pooledRow,
+  pulseCard,
+  regionRow,
+} from './pulseDisplay.ts';
 
 const fusion = (over: Partial<FusionResult> = {}): FusionResult => ({
   bpm: 71.6,
@@ -20,6 +27,7 @@ const update = (over: Partial<PulseUpdate> = {}): PulseUpdate => ({
   status: 'ok',
   regions: [],
   fusion: fusion(),
+  pooled: null,
   globalFlags: [],
   displayBpm: 71.6,
   level: 'good',
@@ -136,5 +144,54 @@ describe('combinedRow', () => {
     const r = combinedRow(fusion({ level: 'poor', agreementBpm: 11, regionsDisagree: true }));
     expect(r.bpm).toBe('-');
     expect(r.note).toBe('Regions differ by 11.0 BPM. Quality: Poor.');
+  });
+});
+
+describe('pooled regions (Patch D)', () => {
+  const pooled = (over: Partial<PooledReport> = {}): PooledReport => ({
+    regions: ['forehead', 'leftCheek', 'rightCheek'],
+    bpm: 74.2,
+    sqi: 0.55,
+    level: 'fair',
+    flags: [],
+    used: true,
+    estimate: null,
+    ...over,
+  });
+
+  it('the card says when the shown value came from pooled regions', () => {
+    const c = pulseCard(
+      update({
+        fusion: fusion({ bpm: null, level: 'poor', singleRegion: true }),
+        pooled: pooled(),
+        level: 'fair',
+      }),
+      true,
+      'ok',
+    );
+    expect(c.value).toBe('72');
+    expect(c.status).toBe(PULSE_COPY.pooled);
+  });
+
+  it('a confirming estimate shows "-" with its own reason', () => {
+    const c = pulseCard(
+      update({ status: 'confirming', displayBpm: null, level: 'good' }),
+      true,
+      'ok',
+    );
+    expect(c).toEqual({ value: '-', status: PULSE_COPY.confirming, level: 'good' });
+  });
+
+  it('the pooled row shows a value only when it was used', () => {
+    expect(pooledRow(pooled())).toEqual({
+      bpm: '74',
+      quality: 'Quality: Fair',
+      note: PULSE_COPY.pooledUsed,
+    });
+    expect(pooledRow(pooled({ used: false, level: 'poor' }))).toEqual({
+      bpm: '-',
+      quality: 'Quality: Poor',
+      note: PULSE_COPY.pooledUnused,
+    });
   });
 });

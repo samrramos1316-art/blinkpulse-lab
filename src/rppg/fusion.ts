@@ -95,15 +95,34 @@ export const SMOOTH_COUNT = 5;
 /**
  * Median of the last 5 accepted estimates. An estimate more than 12 BPM from the
  * current median is held; it is accepted (with the held one) only when the next
- * estimate is within 6 BPM of it.
+ * estimate is within 6 BPM of it. The first estimate (empty history, e.g. after a
+ * pause) is confirmed the same way before anything is shown (SPEC_AMENDMENT_03
+ * Patch D): one window that happens to look clean is not enough.
  */
 export class BpmSmoother {
+  private readonly confirmFirst: boolean;
   private accepted: number[] = [];
   private pending: number | null = null;
 
-  push(bpm: number): number {
+  /** `confirmFirst` false: the first estimate is shown at once (before Patch D; comparisons). */
+  constructor(confirmFirst = true) {
+    this.confirmFirst = confirmFirst;
+  }
+
+  /** The smoothed value, or null while the first estimate waits for confirmation. */
+  push(bpm: number): number | null {
     const current = this.value;
-    if (current === null || Math.abs(bpm - current) <= JUMP_BPM) {
+    if (current === null && !this.confirmFirst) {
+      this.accept(bpm);
+    } else if (current === null) {
+      if (this.pending !== null && Math.abs(bpm - this.pending) <= CONSISTENT_BPM) {
+        this.accept(this.pending);
+        this.accept(bpm);
+        this.pending = null;
+      } else {
+        this.pending = bpm;
+      }
+    } else if (Math.abs(bpm - current) <= JUMP_BPM) {
       this.pending = null;
       this.accept(bpm);
     } else if (this.pending !== null && Math.abs(bpm - this.pending) <= CONSISTENT_BPM) {
@@ -113,7 +132,7 @@ export class BpmSmoother {
     } else {
       this.pending = bpm;
     }
-    return this.value ?? bpm;
+    return this.value;
   }
 
   get value(): number | null {
