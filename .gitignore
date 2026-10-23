@@ -19,3 +19,6 @@ public/wasm/*
 
 # Python bytecode
 __pycache__/
+
+.vercel
+.env*

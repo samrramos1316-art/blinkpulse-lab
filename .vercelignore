@@ -1,0 +1,13 @@
+# Never upload: dev certificate key, Python env, recordings, build output, deps
+.cert/
+.venv/
+recordings/
+*.webm
+*.mp4
+node_modules/
+dist/
+coverage/
+__pycache__/
+*.log
+.env*
+.vercel/
