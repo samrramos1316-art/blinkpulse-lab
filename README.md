@@ -12,6 +12,10 @@ detection, plots) written by hand and validated against reference data.
 > need recordings, a reference device, and participants. The numbers so far come from synthetic
 > signals (see `docs/METHODS.md`).
 
+**Live demo:** https://blinkpulse-lab.vercel.app (static hosting; every push to `main` redeploys).
+Processing stays on your device there too: after the page and the face model load, the app makes no
+network requests.
+
 ![Main view, light theme, with a synthetic face as the camera](docs/screenshots/main-1280-light.png)
 
 _Screenshots use a synthetic face rendered from MediaPipe's canonical face model, never a real

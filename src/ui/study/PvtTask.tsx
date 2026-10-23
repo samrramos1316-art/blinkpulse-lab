@@ -63,6 +63,8 @@ function PvtBox({ onDone }: { onDone: (r: PvtResult) => void }) {
       if (!e.repeat) run.respond(e.timeStamp);
     };
     const onPointer = (e: PointerEvent) => {
+      // One finger or the main mouse button: a second finger is not another response.
+      if (!e.isPrimary || e.button !== 0) return;
       e.preventDefault();
       run.respond(e.timeStamp);
     };

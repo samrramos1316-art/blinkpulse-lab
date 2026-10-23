@@ -481,28 +481,28 @@ frozen) and validation V3 run and reported, which needs participants.
 
 **Section 11 Definition of Done (with the amendments)**
 
-| Item                                                           | State                                                                   |
-| -------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| `npm run check` passes                                         | Done                                                                    |
-| Phase 1 fixture tests against SciPy/NumPy                      | Done                                                                    |
-| Landmark indices and ROI verified in the Explorer              | Eyes done; forehead and cheek regions need the author's live check      |
-| V1 and V2 reported with sample sizes                           | Not run (needs recordings and a reference device)                       |
-| No network requests after load                                 | Verified in every browser run so far                                    |
-| Wording rules (grep test)                                      | Done (`test/designRules.test.ts`)                                       |
-| Study protocol before first session; V3 reported               | Draft committed, not frozen; V3 not run                                 |
-| No HRV in the UI                                               | Done                                                                    |
-| Accessibility (keyboard, contrast, reduced motion)             | Done in automated checks; screen reader not checked                     |
-| README, METHODS, VALIDATION, LIMITATIONS, ETHICS               | Written; VALIDATION has no results yet                                  |
-| Live demo deployed; demo video recorded                        | Not done: deploying needs the author's go-ahead; video needs the author |
-| Multi-region pulse validated, fusion vs best single region     | Not run (V2b)                                                           |
-| Blink timeline gaps and text alternatives                      | Done                                                                    |
-| Study mode hides the indicator (tested)                        | Done                                                                    |
-| Consent/assent forms before first session; guardian signatures | Drafts committed; signatures when recruiting                            |
-| Pulse and HRV not inputs to the indicator                      | Done                                                                    |
-| Colours from tokens; contrast test                             | Done                                                                    |
-| Light/dark at 360/768/1280 with screenshots                    | Done                                                                    |
-| Keyboard-only first run                                        | Done                                                                    |
-| Usability check with 2 people                                  | Not done (needs the author)                                             |
+| Item                                                           | State                                                                           |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `npm run check` passes                                         | Done                                                                            |
+| Phase 1 fixture tests against SciPy/NumPy                      | Done                                                                            |
+| Landmark indices and ROI verified in the Explorer              | Eyes done; forehead and cheek regions need the author's live check              |
+| V1 and V2 reported with sample sizes                           | Not run (needs recordings and a reference device)                               |
+| No network requests after load                                 | Verified in every browser run so far                                            |
+| Wording rules (grep test)                                      | Done (`test/designRules.test.ts`)                                               |
+| Study protocol before first session; V3 reported               | Draft committed, not frozen; V3 not run                                         |
+| No HRV in the UI                                               | Done                                                                            |
+| Accessibility (keyboard, contrast, reduced motion)             | Done in automated checks; screen reader not checked                             |
+| README, METHODS, VALIDATION, LIMITATIONS, ETHICS               | Written; VALIDATION has no results yet                                          |
+| Live demo deployed; demo video recorded                        | Deployed 2026-10-22 (https://blinkpulse-lab.vercel.app); video needs the author |
+| Multi-region pulse validated, fusion vs best single region     | Not run (V2b)                                                                   |
+| Blink timeline gaps and text alternatives                      | Done                                                                            |
+| Study mode hides the indicator (tested)                        | Done                                                                            |
+| Consent/assent forms before first session; guardian signatures | Drafts committed; signatures when recruiting                                    |
+| Pulse and HRV not inputs to the indicator                      | Done                                                                            |
+| Colours from tokens; contrast test                             | Done                                                                            |
+| Light/dark at 360/768/1280 with screenshots                    | Done                                                                            |
+| Keyboard-only first run                                        | Done                                                                            |
+| Usability check with 2 people                                  | Not done (needs the author)                                                     |
 
 ## Bug review (2026-10-21, author's request)
 
@@ -538,3 +538,25 @@ succeeds.
 
 **Not verified:** the 30-minute limit in a live recording, and the cleared pulse view after Stop in a
 browser with a camera.
+
+## Second bug review (2026-10-22, author's request)
+
+After the deploy, a review of what the first one did not cover: the deploy itself, the developer
+tools (`#explorer`, `#v1`, `#v2`), study mode on phones, and the docs. `npm run check` passes (537
+tests).
+
+| Bug                                                                                                                                                                    | Fix                                                                                                                                                            |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **The deploy sent no `frame-ancestors`**, so any site could embed the app in a frame (the CSP meta tag cannot carry it; ETHICS said it was to be set at deploy time).  | `vercel.json` sends it and the other security headers listed in ETHICS; hashed assets are cached for a year.                                                   |
+| **Leaving study mode by accident lost the session.** The browser Back button changes the hash, which unmounted the session; reload or closing the tab gave no warning. | While a session runs, the view stays on `#study` (`leaveGuard.ts`, tested) and the browser asks before reload or close. The session's Stop button still works. |
+| **A second finger or a right-click on the PVT box counted as a response**, so a two-finger tap during the wait was logged as a false start.                            | Only the primary pointer's main button responds.                                                                                                               |
+| README had no live link; the Definition of Done still said "not deployed".                                                                                             | Updated.                                                                                                                                                       |
+
+**Verified in the browser** (production build, headless Chrome, no camera): with no session, Back
+leaves study mode; during a session, Back and a hash change keep `#study`, and closing the tab shows
+the browser's leave prompt; no page errors. **Not verified:** the new headers on the live site (they
+apply on the next deploy) and the PVT on a real touch screen.
+
+Checked and found correct: the face overlay's mapping for the cropped portrait preview, the
+landmarker's increasing timestamps when a tool analyses a video again, the Explorer overlay, camera
+release on route change and page hide, and the wake lock.

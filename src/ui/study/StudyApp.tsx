@@ -9,6 +9,7 @@ import { PreviewPanel } from '../components/PreviewPanel.tsx';
 import { SkipLink } from '../components/SkipLink.tsx';
 import { ThemeToggle } from '../components/ThemeToggle.tsx';
 import { downloadText } from '../download.ts';
+import { setStudyRunning } from '../leaveGuard.ts';
 import { LockIcon, LogoMark, PlayIcon, StopIcon } from '../icons/Icons.tsx';
 import { APP_NAME, PRIVACY_BADGE, PRIVACY_BADGE_SHORT } from '../strings.ts';
 import { StudyScreen } from './StudyScreen.tsx';
@@ -48,6 +49,19 @@ export function StudyApp() {
   const calibrating = blink.snapshot.calibration.phase === 'running';
   const baseline = blink.snapshot.indicator.baseline;
   const inSession = study.session !== null && study.step !== 'finished';
+  // Back, reload, or closing the tab would lose the session: keep the view and ask first.
+  useEffect(() => {
+    if (!inSession) return;
+    setStudyRunning(true);
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => {
+      setStudyRunning(false);
+      window.removeEventListener('beforeunload', warn);
+    };
+  }, [inSession]);
 
   return (
     <>

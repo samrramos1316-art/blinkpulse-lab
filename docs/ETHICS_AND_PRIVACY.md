@@ -90,8 +90,11 @@ Known gaps:
 - The dev server's CSP also allows inline scripts and styles (hot reload needs them). Its
   connection rules are the same as production's. Use `npm run build && npm run preview` to test the
   real policy.
-- `frame-ancestors` cannot be set via `<meta>`; it must be sent as an HTTP header by the static
-  host. To be configured at deploy time.
+- `frame-ancestors` cannot be set via `<meta>`, so the host sends it as an HTTP header
+  (`vercel.json`, added 2026-10-22): `frame-ancestors 'none'` and `X-Frame-Options: DENY` (no other
+  site can embed the app and its camera prompt), plus `X-Content-Type-Options: nosniff`,
+  `Referrer-Policy: no-referrer`, and a `Permissions-Policy` that allows the camera for this origin
+  only and turns off the microphone and location.
 
 ## Data handling summary (Phase 5)
 
