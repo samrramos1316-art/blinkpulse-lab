@@ -21,6 +21,57 @@ network requests.
 _Screenshots use a synthetic face rendered from MediaPipe's canonical face model, never a real
 person. More in `docs/screenshots/` (360, 768, and 1280 px; light and dark; Signal Lab; About)._
 
+## Why this project exists
+
+Webcam "vital signs" demos are everywhere, but most hide how the numbers are made and rarely say
+how often they are wrong. BlinkPulse Lab tries the opposite:
+
+- **Show the work.** Every step from camera pixels to a number (eyelid geometry, colour traces,
+  filters, the spectrum) is written by hand in TypeScript, unit-tested against SciPy reference
+  data, and visible live in the Signal Lab.
+- **Be honest about quality.** A pulse rate is shown only when signal quality is Fair or better;
+  otherwise the app shows "-" and says why. Measurements that cannot be trusted are reported as
+  "Not enough data" rather than guessed.
+- **Stay on the device.** Video never leaves the browser, nothing is stored unless you export
+  numbers yourself, and there is no telemetry.
+- **Test claims before making them.** Each measurement has a planned validation (V1 blinks, V2
+  pulse, V3 the study below), and the results will be published as found, including null results.
+
+It is meant for learning and research: students of signal processing, people curious about how
+rPPG and blink detection work, and anyone who wants a transparent baseline to compare against.
+
+## The study (planned, not started)
+
+The open question behind the experimental eye-closure indicator is simple: **when the same person
+feels sleepier, does their eyelid behaviour change in a way a webcam can measure?**
+
+Clinical research links slower and longer eye closures with sleepiness, but it uses lab equipment
+under controlled conditions. This study asks whether an ordinary webcam, during ordinary computer
+work, can pick up the same pattern for an individual, compared only with that person's own alert
+baseline.
+
+How it would work (`docs/STUDY_PROTOCOL.md`):
+
+1. A participant runs short sessions of their own computer work at times of day they choose. No
+   sleep deprivation, caffeine rules, or other manipulation.
+2. The app records a 3-minute alert baseline, then computes an Eye-Closure Index from three
+   eyelid measures. The participant does **not** see the index during the session, so it cannot
+   influence them.
+3. Every 5 minutes the participant rates their own sleepiness on a 1-9 scale. A short
+   reaction-time task runs at the start and end.
+4. Only numbers are exported (no video, images, or face landmarks), then analysed with the
+   pre-registered script `tools/analyze_v3.py`.
+
+The main hypothesis is that the index rises with the person's own sleepiness ratings. Crucially,
+it is compared against two simple controls, **time on task** and **plain blink rate**: if the index
+does no better than those, that is reported as the result. Ordinary work may produce little
+sleepiness, so a null result is a real possibility and will be published as such.
+
+**Status:** the protocol and consent forms are drafts. No participant data will be collected until
+they are reviewed, the open decisions in the protocol are settled, ethics approval and the
+sleepiness-scale licence are in place, and the protocol is frozen with its hash. Until then, study
+mode (`#study`) is for testing on yourself only. Pulse is never used as a sleepiness signal.
+
 ## Disclaimer
 
 > BlinkPulse Lab is an experimental educational signal-processing and research project. It is not
@@ -139,6 +190,19 @@ explain, every algorithm.
   analysis script, tests): AI-assisted. The protocol's decisions are the author's to make.
 - Phase 5 (Signal Lab, About dialog, accessibility and privacy checks, docs, demo script):
   AI-assisted.
+
+## Open source
+
+BlinkPulse Lab is open source under the MIT licence (`LICENSE`): you may use, copy, change, and
+share it, including commercially, as long as the copyright and licence notice stay with it. The
+disclaimer above still applies to any copy or derived app.
+
+Contributions are welcome through issues and pull requests on GitHub. Please keep the project's
+rules (`CLAUDE.md`): hand-written signal processing, no network requests after load, no health
+claims, numbers in docs only with a test or validation run behind them, and `npm run check`
+passing.
+
+Third-party code and the face model keep their own licences; see `THIRD_PARTY_NOTICES.md`.
 
 ## License
 
