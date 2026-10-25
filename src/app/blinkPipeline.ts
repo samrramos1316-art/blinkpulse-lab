@@ -257,6 +257,11 @@ export class BlinkPipeline {
     return this.eyeClosure.baseline;
   }
 
+  /** Monotonic time where the session timeline's minute 0 starts, or NaN. */
+  get sessionStartMs(): number {
+    return this.session.startMs;
+  }
+
   /** Time of the latest frame given to the eye-closure tracker, or NaN. */
   get latestEyeClosureMs(): number {
     return this.eyeClosure.latestSampleMs;

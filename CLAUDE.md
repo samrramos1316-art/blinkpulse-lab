@@ -6,6 +6,8 @@
 
 > **AMENDED:** `SPEC_AMENDMENT_03.md` (Patch D) adds a pooled-region fallback and first-value confirmation to the pulse estimate. It never lowers the "Fair or better" display rule.
 
+> **AMENDED:** `SPEC_AMENDMENT_04.md` details Phase 6 (eye-comfort reminder, flicker check, HRV limits) and adds Phase 7, long-term tracking: an opt-in history on this device, a mini window, and a history view. It never overrides a product, privacy, wording, or accessibility rule.
+
 Read `PROJECT_SPEC.md` first. It is the source of truth. These rules apply to every session.
 
 ## Workflow

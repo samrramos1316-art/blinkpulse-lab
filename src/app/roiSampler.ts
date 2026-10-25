@@ -7,7 +7,14 @@
  */
 
 import type { Point } from '../blink/ear.ts';
-import { boundingBox, roiStats, type RegionId, type RoiStats } from '../rppg/roi.ts';
+import {
+  BACKGROUND_STEP,
+  boundingBox,
+  mergeStats,
+  roiStats,
+  type RegionId,
+  type RoiStats,
+} from '../rppg/roi.ts';
 
 export class RoiSampler {
   private canvas: HTMLCanvasElement | null = null;
@@ -37,6 +44,26 @@ export class RoiSampler {
       out[id] = roiStats(ctx.getImageData(0, 0, box.w, box.h).data, box, poly);
     }
     return out;
+  }
+
+  /** Statistics of the background reference rectangles, merged (null if none). */
+  sampleBackground(video: HTMLVideoElement, rects: readonly Point[][]): RoiStats | null {
+    const w = video.videoWidth;
+    const h = video.videoHeight;
+    const ctx = this.context();
+    if (!ctx || w === 0) return null;
+    const stats: RoiStats[] = [];
+    for (const poly of rects) {
+      const box = boundingBox(poly, w, h);
+      if (!box) continue;
+      if (ctx.canvas.width < box.w || ctx.canvas.height < box.h) {
+        ctx.canvas.width = Math.max(ctx.canvas.width, box.w);
+        ctx.canvas.height = Math.max(ctx.canvas.height, box.h);
+      }
+      ctx.drawImage(video, box.x, box.y, box.w, box.h, 0, 0, box.w, box.h);
+      stats.push(roiStats(ctx.getImageData(0, 0, box.w, box.h).data, box, poly, BACKGROUND_STEP));
+    }
+    return mergeStats(stats);
   }
 
   close(): void {

@@ -31,10 +31,11 @@ export const CAPTURE_STATUS = {
     'Camera on, but below 24 frames per second. More light often lets the camera run faster.',
   ended:
     'The camera stopped. It may have been disconnected or turned off. Press Start to try again.',
-  // PROJECT_SPEC 5.1 wording.
-  hidden: 'Keep this window visible (e.g. side-by-side) for measurements.',
+  // PROJECT_SPEC 5.1 wording, plus the mini window (SPEC_AMENDMENT_04 F1).
+  hidden:
+    'Keep this window visible (e.g. side-by-side) for measurements. In Chrome or Edge on a computer, the mini window also works.',
   wasHidden:
-    'Paused while this window was hidden. Keep this window visible (e.g. side-by-side) for measurements.',
+    'Paused while this window was hidden. Keep this window visible (e.g. side-by-side) for measurements. In Chrome or Edge on a computer, the mini window also works.',
 } as const;
 
 export const CAMERA_PRIVACY =
@@ -119,6 +120,9 @@ export const PULSE_FLAG_TEXT = {
   lowCoverage: 'Part of this region is not visible skin (hair, glasses, or shadow).',
   lowFps: 'The camera is running slowly (under 20 frames per second). More light often helps.',
   crossCheck: 'The two estimation methods disagree.',
+  flicker:
+    'The light around you seems to pulse at the same rate. Flickering lamps or screens can ' +
+    'cause this; daylight or another lamp may help.',
 } as const;
 
 export const REGION_LABEL = {
@@ -183,15 +187,16 @@ export const ABOUT_COPY = {
   methods: [
     'Face tracking: MediaPipe Face Landmarker (a pre-trained model, run on this device) finds 478 points on the face in every video frame. Everything after that is written for this project.',
     'Blinks: the eye aspect ratio compares the height of each eye with its width. A 10-second calibration finds your open-eye level, and a blink is timed from the moment the eye drops below 70% of that level until it rises above 80% again.',
-    'Pulse rate: the average colour of three skin regions (forehead and both cheeks) changes very slightly with each heartbeat. The POS method combines the colours, a band-pass filter keeps 42-180 beats per minute, and the strongest rhythm in a 10-second window gives the estimate. Regions with good signal are combined; when none is clear enough, the regions are pooled into one signal and tried again. A first estimate is shown only once the next one agrees with it.',
+    'Pulse rate: the average colour of three skin regions (forehead and both cheeks) changes very slightly with each heartbeat. The POS method combines the colours, a band-pass filter keeps 42-180 beats per minute, and the strongest rhythm in a 10-second window gives the estimate. Regions with good signal are combined; when none is clear enough, the regions are pooled into one signal and tried again. A first estimate is shown only once the next one agrees with it. The light beside your face is checked too: if it pulses at the same rate (a flickering lamp or screen), the quality is lowered.',
     'Eye-closure indicator: compares how much your eyes are closed, how often they close for half a second or more, and how long your blinks last with your own baseline from earlier in the same session.',
+    'History (off unless you turn it on): each finished minute is saved as numbers in this browser only, never uploaded, and deleted after 90 days. You can export or delete it at any time.',
   ],
   limitations: [
     'Accuracy on real people has not been measured yet; see docs/VALIDATION.md.',
     'Head position, looking down, glasses, lighting, camera effects, and movement all change the measurements.',
     'At 30 frames per second, blink durations are accurate to about one frame (33 ms).',
     'The colour signal is stronger for some skin tones and lighting conditions than others, so the pulse rate may work worse for some people.',
-    'Measurements pause while this window is hidden or minimised.',
+    'Measurements pause while this window is hidden or minimised, unless the mini window is open.',
   ],
   parametersNote:
     'These values are fixed so that results can be checked against the validation studies. They cannot be changed in the app.',
@@ -216,4 +221,92 @@ export const LAB_STEPS = {
   spectrum:
     'How strong each rhythm is in the filtered signal. The strongest peak in the shaded band gives ' +
     'the estimate; how much of the power sits in that peak gives the signal quality index.',
+} as const;
+
+/** Optional eye-comfort reminder (PROJECT_SPEC 5.6). Informational; no health state. */
+export const REMINDER_COPY = {
+  title: 'Eye-comfort reminder',
+  intro:
+    'Off by default. Shows a gentle note when you have been blinking much less than your ' +
+    'usual rate for a few minutes, and only while blink detection is working well. ' +
+    'No sound. Nothing is stored.',
+  enable: 'Remind me when I blink much less than usual',
+  fraction: 'Remind below',
+  fractionOption: (f: number) => `${String(Math.round(f * 100))}% of my usual rate`,
+  minutes: 'For at least',
+  minutesOption: (m: number) => `${String(m)} minutes`,
+  cooldown: 'At most once every',
+  cooldownOption: (m: number) => `${String(m)} minutes`,
+  notify: 'Also show a silent system notification',
+  notifyDenied:
+    'Notifications are blocked for this site. Allow them in your browser settings to use this.',
+  notifyUnsupported: 'This browser cannot show notifications from this page.',
+  baselineNone:
+    'Your usual rate is measured over your first 3 good minutes after calibration (about 3 to 4 minutes).',
+  baselineSession: (rate: number) =>
+    `Your usual rate this session: ${rate.toFixed(0)} blinks per minute (first 3 good minutes).`,
+  baselineHistory: (rate: number, minutes: number) =>
+    `Your usual rate from saved history: ${rate.toFixed(0)} blinks per minute (${String(minutes)} minutes over the last 14 days).`,
+  banner:
+    "You've been blinking less than your usual rate for a few minutes. If your eyes feel dry, " +
+    'consider looking at something far away for 20 seconds.',
+  dismiss: 'Dismiss',
+  notificationTitle: 'Eye-comfort reminder',
+} as const;
+
+/** Tracking card (SPEC_AMENDMENT_04 F1-F2). */
+export const TRACKING_COPY = {
+  title: 'Tracking and reminders',
+  mini: {
+    title: 'Mini window',
+    intro:
+      'Keeps measuring while you work in other windows: a small window stays on top with the ' +
+      'latest values. Closing it pauses measuring whenever this page is hidden.',
+    open: 'Open mini window',
+    close: 'Close mini window',
+    isOpen: 'The mini window is open. You can now work in other windows.',
+    unsupported:
+      'This browser has no mini window (Chrome and Edge on a computer have one). Keep this ' +
+      'window visible, for example side by side, while you work.',
+  },
+  history: {
+    title: 'History on this device',
+    intro:
+      'Off by default. When on, each finished minute is saved in this browser as numbers only: ' +
+      'blink measures, the pulse values shown, and the eye-closure indicator. No video, images, ' +
+      'or face landmarks. Nothing is uploaded. Saved minutes are deleted after 90 days.',
+    enable: 'Save per-minute numbers on this device',
+    unavailable:
+      'This browser cannot store history here (storage is blocked, for example in some private windows).',
+    saved: (today: number, total: number) =>
+      `Saved today: ${String(today)} minutes. In total: ${String(total)} minutes.`,
+    turnedOff: 'History is off. Delete the minutes saved so far too?',
+    keep: 'Keep them',
+    delete: 'Delete saved history',
+    open: 'Open history',
+  },
+} as const;
+
+/** History view (SPEC_AMENDMENT_04 F3-F4). Descriptive only. */
+export const HISTORY_COPY = {
+  title: 'History',
+  intro:
+    'Numbers saved on this device, per day. They describe what was measured; they are not a ' +
+    'health assessment. Every value shows how many minutes it comes from.',
+  off: 'History is off. Turn it on under "Tracking and reminders" to save per-minute numbers on this device.',
+  empty: 'Nothing saved yet. With history on, each finished minute of measuring is saved here.',
+  loading: 'Loading history...',
+  dayGate: 'A day shows blink values when it has at least 10 usable minutes.',
+  pulseNote:
+    'Estimated pulse rate: the median of the values the app showed (quality Fair or better). ' +
+    'Accuracy not yet validated.',
+  indicatorNote:
+    "Minutes in each band of the 5-minute result, each compared with that session's own alert " +
+    'baseline. Experimental and not validated.',
+  exportCsv: 'Export CSV',
+  deleteAll: 'Delete all history...',
+  deleteConfirm: 'Delete every saved minute from this browser? This cannot be undone.',
+  deleteYes: 'Delete all',
+  cancel: 'Cancel',
+  deleted: 'All saved history was deleted.',
 } as const;

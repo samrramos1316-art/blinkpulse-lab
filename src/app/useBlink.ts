@@ -11,6 +11,8 @@ import type { Point } from '../blink/ear.ts';
 import { lockCameraAuto, type CameraLockResult } from '../capture/cameraLock.ts';
 import { median, percentile } from '../dsp/stats.ts';
 import type { BlinkEvent } from '../blink/blinkDetector.ts';
+import { BIN_MS } from '../blink/sessionSummary.ts';
+import { PulseMinutes } from '../history/history.ts';
 import { PulseEstimator, type PulseUpdate } from '../rppg/pulseEstimator.ts';
 import type { RegionId } from '../rppg/roi.ts';
 import { createLandmarker, type Delegate, type Landmarker } from '../vision/faceLandmarker.ts';
@@ -64,6 +66,8 @@ export interface Blink {
   cancelBaseline: () => void;
   /** Receive every blink event as it is detected (study mode); null to stop. */
   setEventListener: (fn: ((e: BlinkEvent) => void) | null) => void;
+  /** Pulse values per session-timeline minute, for history (SPEC_AMENDMENT_04 F3). */
+  pulseMinutes: PulseMinutes;
 }
 
 const TIMING_WINDOW = 120;
@@ -95,6 +99,7 @@ class Runtime {
   readonly sampler = new RoiSampler();
   readonly inference = new RingMedian();
   readonly processing = new RingMedian();
+  readonly pulseMinutes = new PulseMinutes();
   landmarker: Landmarker | null = null;
   loading = false;
   overlay: OverlayFrame | null = null;
@@ -123,6 +128,7 @@ class Runtime {
     this.pulse.reset();
     this.inference.reset();
     this.processing.reset();
+    this.pulseMinutes.reset();
     this.overlay = null;
   }
 
@@ -206,6 +212,10 @@ export function useBlink(capture: Capture): Blink {
         );
         const update = state.pulse.push(pulseFrame);
         state.recorder?.add(pulseFrame, update);
+        const origin = pipeline.sessionStartMs;
+        if (update && update.status !== 'warmingUp' && Number.isFinite(origin)) {
+          state.pulseMinutes.add(Math.floor((update.tMs - origin) / BIN_MS), update.displayBpm);
+        }
         state.setOverlay({
           width: w,
           height: h,
@@ -321,5 +331,6 @@ export function useBlink(capture: Capture): Blink {
     setEventListener: (fn) => {
       state.setEventListener(fn);
     },
+    pulseMinutes: state.pulseMinutes,
   };
 }

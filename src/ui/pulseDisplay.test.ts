@@ -33,6 +33,7 @@ const update = (over: Partial<PulseUpdate> = {}): PulseUpdate => ({
   level: 'good',
   rawBpm: 71.6,
   fps: 30,
+  backgroundChecked: true,
   ...over,
 });
 

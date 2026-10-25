@@ -1,8 +1,9 @@
 /**
  * Numeric trace files (PROJECT_SPEC 5.5 "record numeric trace", 7.3 offline
  * evaluation). Pure. Numbers only: per-frame region means and quality numbers,
- * nose-tip position and inter-ocular distance for the motion flag. No images, no
- * landmark sets.
+ * nose-tip position and inter-ocular distance for the motion flag, and the
+ * background reference's means (Phase 6 flicker check). No images, no landmark sets.
+ * Files recorded before the background columns existed still load (no background).
  *
  * frames CSV: one row per frame, replayable through PulseEstimator by
  *   tools/eval_cli.ts. Empty cells = not available.
@@ -24,7 +25,11 @@ export const FRAME_HEADER = [
   'nose_x',
   'nose_y',
   'iod_px',
+  ...REGION_COLS.map((c) => `background_${c}`),
 ];
+
+/** Columns added later; a file without them still parses. */
+const OPTIONAL_COLS = new Set(REGION_COLS.map((c) => `background_${c}`));
 
 const num = (v: number | undefined | null, digits = 3) =>
   v === undefined || v === null || !Number.isFinite(v)
@@ -45,6 +50,15 @@ export function frameRow(f: PulseFrame): string {
     );
   }
   cells.push(num(f.motion?.noseTip.x, 2), num(f.motion?.noseTip.y, 2), num(f.motion?.iodPx, 2));
+  const bg = f.background;
+  cells.push(
+    num(bg?.r, 4),
+    num(bg?.g, 4),
+    num(bg?.b, 4),
+    num(bg?.coverage, 4),
+    num(bg?.saturatedFraction, 4),
+    num(bg?.meanLuma, 2),
+  );
   return cells.join(',');
 }
 
@@ -70,12 +84,13 @@ export function parseFramesCsv(text: string): PulseFrame[] {
   const { header, rows: rs } = rows(text);
   const col = (name: string) => {
     const i = header.indexOf(name);
-    if (i < 0) throw new Error(`Missing column "${name}"`);
+    if (i < 0 && !OPTIONAL_COLS.has(name)) throw new Error(`Missing column "${name}"`);
     return i;
   };
   const idx = Object.fromEntries(FRAME_HEADER.map((h) => [h, col(h)])) as Record<string, number>;
   const val = (cells: string[], name: string) => {
-    const c = cells[idx[name] as number];
+    const i = idx[name] as number;
+    const c = i < 0 ? undefined : cells[i];
     return c === undefined || c === '' ? NaN : Number(c);
   };
   return rs.map(({ line, cells }) => {
@@ -96,6 +111,7 @@ export function parseFramesCsv(text: string): PulseFrame[] {
           }
         : null;
     }
+    const bgR = val(cells, 'background_r');
     const nx = val(cells, 'nose_x');
     const ny = val(cells, 'nose_y');
     const iod = val(cells, 'iod_px');
@@ -108,6 +124,17 @@ export function parseFramesCsv(text: string): PulseFrame[] {
         Number.isFinite(nx) && Number.isFinite(ny) && Number.isFinite(iod)
           ? { noseTip: { x: nx, y: ny }, iodPx: iod }
           : null,
+      background: Number.isFinite(bgR)
+        ? {
+            r: bgR,
+            g: val(cells, 'background_g'),
+            b: val(cells, 'background_b'),
+            polygonPixels: NaN,
+            coverage: val(cells, 'background_coverage'),
+            saturatedFraction: val(cells, 'background_saturated'),
+            meanLuma: val(cells, 'background_luma'),
+          }
+        : null,
     };
   });
 }
@@ -127,6 +154,8 @@ export const ESTIMATE_HEADER = [
   'pooled_sqi',
   'pooled_level',
   'pooled_used',
+  // Flicker check (Phase 6): 1 when any region was flagged, empty without a background.
+  'flicker',
 ];
 
 /** `wallTimeMs` NaN leaves the cell empty (no wall clock, e.g. a video file). */
@@ -147,6 +176,8 @@ export function estimateRow(u: PulseUpdate, wallTimeMs: number): string {
   cells.push(u.globalFlags.join(' '));
   const p = u.pooled;
   cells.push(num(p?.bpm, 2), num(p?.sqi, 3), p?.level ?? '', p ? (p.used ? '1' : '0') : '');
+  const flicker = u.regions.some((r) => r.flags.includes('flicker'));
+  cells.push(u.backgroundChecked ? (flicker ? '1' : '0') : '');
   return cells.join(',');
 }
 

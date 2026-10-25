@@ -32,9 +32,17 @@ export const MOTION_FRACTION = 0.1;
 export const FPS_WARN = 20;
 export const FPS_MIN = 15;
 
+/**
+ * Flicker (Phase 6): the background reference has at least this SQI at the region's
+ * pulse peak, i.e. the scene's light varies at that rate about as cleanly as a Fair
+ * pulse signal. Starting value (= SQI_FAIR); false-flag rate on noise in
+ * docs/METHODS.md.
+ */
+export const FLICKER_SQI = SQI_FAIR;
+
 export type RegionFlag = 'saturated' | 'dark' | 'lowCoverage';
 export type GlobalFlag = 'motion' | 'lightingChange' | 'lowFps';
-export type PulseFlag = RegionFlag | GlobalFlag | 'crossCheck';
+export type PulseFlag = RegionFlag | GlobalFlag | 'crossCheck' | 'flicker';
 
 const ORDER: readonly QualityLevel[] = ['poor', 'fair', 'good'];
 
@@ -80,16 +88,20 @@ export interface RegionQuality {
 
 /**
  * Level from the SQI, lowered one step for each of: motion, sudden lighting
- * change, low frame rate, and spectral/time-domain disagreement (> 8 BPM).
- * Region flags do not change the level; they exclude the region from fusion.
+ * change, low frame rate, spectral/time-domain disagreement (> 8 BPM), and flicker
+ * (the background reference varies at the same rate; `flicker` says whether it does
+ * at this estimate's peak, Phase 6). Region flags do not change the level; they
+ * exclude the region from fusion.
  */
 export function regionQuality(
   est: WindowEstimate,
   stats: WindowStats,
   global: readonly GlobalFlag[],
+  flicker = false,
 ): RegionQuality {
   const flags: PulseFlag[] = [...regionFlags(stats), ...global];
   if (est.crossCheckAgrees === false) flags.push('crossCheck');
-  const penalties = global.length + (est.crossCheckAgrees === false ? 1 : 0);
+  if (flicker) flags.push('flicker');
+  const penalties = global.length + (est.crossCheckAgrees === false ? 1 : 0) + (flicker ? 1 : 0);
   return { level: lowerLevel(levelFromSqi(est.sqi), penalties), flags };
 }

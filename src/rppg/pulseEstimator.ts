@@ -7,6 +7,11 @@
  * independently, quality-assessed, and fused; the fused value is smoothed. When the
  * fusion has no Fair-or-better value, the usable regions are pooled into one trace
  * and estimated again (pooled.ts, SPEC_AMENDMENT_03 Patch D), capped at Fair.
+ *
+ * Flicker (Phase 6): a background reference beside the face is traced like a region.
+ * When its green channel has a clean peak at a region's pulse frequency (SQI at that
+ * frequency >= FLICKER_SQI), the light of the whole scene varies at that rate, so the
+ * region's estimate is flagged and its quality lowered one step.
  */
 
 import type { Point } from '../blink/ear.ts';
@@ -15,6 +20,7 @@ import { BpmSmoother, fuseRegions, type FusionResult } from './fusion.ts';
 import {
   estimateWindow,
   HOP_MS,
+  sqi,
   WINDOW_MS,
   type TraceWindow,
   type WindowEstimate,
@@ -22,6 +28,7 @@ import {
 } from './hrEstimator.ts';
 import {
   atLeastFair,
+  FLICKER_SQI,
   FPS_MIN,
   globalFlags,
   motionFlag,
@@ -32,6 +39,7 @@ import {
   type QualityLevel,
 } from './quality.ts';
 import { poolWindows, pooledStats } from './pooled.ts';
+import type { PowerSpectrum } from '../dsp/spectrum.ts';
 import { RgbTrace, type WindowStats } from './rgbTrace.ts';
 import { REGION_IDS, type RegionId, type RoiStats } from './roi.ts';
 
@@ -44,6 +52,8 @@ export interface PulseFrame {
   regions: Partial<Record<RegionId, RoiStats | null>>;
   /** Nose tip and inter-ocular distance (pixels) for the motion flag, or null. */
   motion: { noseTip: Point; iodPx: number } | null;
+  /** Background reference beside the face (Phase 6); absent or null when unavailable. */
+  background?: RoiStats | null;
 }
 
 export interface RegionReport {
@@ -90,6 +100,8 @@ export interface PulseUpdate {
   /** Unsmoothed fused estimate of this hop (for logging / validation). */
   rawBpm: number | null;
   fps: number | null;
+  /** A background window was available, so estimates were checked for flicker. */
+  backgroundChecked: boolean;
 }
 
 /** Consecutive hops without a shown value before the smoother forgets its history. */
@@ -107,6 +119,7 @@ export class PulseEstimator {
   private readonly traces = new Map<RegionId, RgbTrace>(
     REGION_IDS.map((id) => [id, new RgbTrace()]),
   );
+  private readonly background = new RgbTrace();
   private speeds: { tMs: number; v: number }[] = [];
   private prevMotion: { tMs: number; p: Point; iod: number } | null = null;
   private readonly smoother: BpmSmoother;
@@ -139,6 +152,22 @@ export class PulseEstimator {
         frame.gapBefore,
       );
     }
+    const bg = frame.background;
+    const bgOk =
+      bg != null && Number.isFinite(bg.r) && Number.isFinite(bg.g) && Number.isFinite(bg.b);
+    this.background.push(
+      {
+        tMs: frame.tMs,
+        r: bgOk ? bg.r : NaN,
+        g: bgOk ? bg.g : NaN,
+        b: bgOk ? bg.b : NaN,
+        valid: bgOk,
+        coverage: bg?.coverage ?? 0,
+        saturatedFraction: bg?.saturatedFraction ?? 0,
+        meanLuma: bg?.meanLuma ?? 0,
+      },
+      frame.gapBefore,
+    );
     this.trackMotion(frame);
 
     if (frame.tMs - this.firstMs < WINDOW_MS) {
@@ -155,6 +184,7 @@ export class PulseEstimator {
 
   reset(): void {
     for (const t of this.traces.values()) t.reset();
+    this.background.reset();
     this.speeds = [];
     this.prevMotion = null;
     this.smoother.reset();
@@ -181,6 +211,7 @@ export class PulseEstimator {
       level: null,
       rawBpm: null,
       fps: null,
+      backgroundChecked: false,
     };
   }
 
@@ -202,6 +233,8 @@ export class PulseEstimator {
 
   private estimate(tMs: number): PulseUpdate {
     const moving = motionFlag(this.speeds.filter((s) => s.tMs >= tMs - WINDOW_MS).map((s) => s.v));
+    const bgSpectrum = this.backgroundSpectrum(tMs);
+    const flickerAt = (hz: number) => bgSpectrum !== null && sqi(bgSpectrum, hz) >= FLICKER_SQI;
     const reports: RegionReport[] = [];
     const statsList: WindowStats[] = [];
     const poolable: { id: RegionId; window: TraceWindow; stats: WindowStats }[] = [];
@@ -227,7 +260,7 @@ export class PulseEstimator {
         reports.push(failed(id, est.reason));
         continue;
       }
-      const q = regionQuality(est, w.stats, g);
+      const q = regionQuality(est, w.stats, g, flickerAt(est.peakHz));
       reports.push({
         id,
         bpm: est.bpm,
@@ -241,7 +274,13 @@ export class PulseEstimator {
     }
     const fps = statsList.length ? median(statsList.map((s) => s.fps)) : null;
 
-    const base = { tMs, regions: reports, globalFlags: global, fps };
+    const base = {
+      tMs,
+      regions: reports,
+      globalFlags: global,
+      fps,
+      backgroundChecked: bgSpectrum !== null,
+    };
     if (fps !== null && fps < FPS_MIN) {
       return this.miss({
         ...base,
@@ -268,7 +307,7 @@ export class PulseEstimator {
     if (fusion.bpm !== null && atLeastFair(fusion.level)) {
       return this.show({ ...base, fusion, pooled: null }, fusion.bpm, fusion.level);
     }
-    const pooled = this.pooling ? poolRegions(poolable, global) : null;
+    const pooled = this.pooling ? poolRegions(poolable, global, flickerAt) : null;
     if (pooled?.used && pooled.bpm !== null && pooled.level !== null) {
       return this.show({ ...base, fusion, pooled }, pooled.bpm, pooled.level);
     }
@@ -282,6 +321,14 @@ export class PulseEstimator {
       level: fusion.level,
       rawBpm: fusion.bpm,
     });
+  }
+
+  /** Spectrum of the background's green channel over the window, or null. */
+  private backgroundSpectrum(tMs: number): PowerSpectrum | null {
+    const w = this.background.window(tMs);
+    if (!w.ok || w.stats.fps < FPS_MIN) return null;
+    const est = estimateWindow(w.window, { method: 'green' });
+    return est.ok ? est.spectrum : null;
   }
 
   private show(
@@ -323,6 +370,7 @@ function failed(id: RegionId, failure: WindowFailure | 'gap' | 'tooShort' | null
 export function poolRegions(
   regions: readonly { id: RegionId; window: TraceWindow; stats: WindowStats }[],
   global: readonly GlobalFlag[],
+  flickerAt: (hz: number) => boolean = () => false,
 ): PooledReport | null {
   const window = poolWindows(regions.map((r) => r.window));
   if (!window) return null;
@@ -339,7 +387,12 @@ export function poolRegions(
   if (window.tMs.length < 2) return none;
   const est = estimateWindow(window);
   if (!est.ok) return none;
-  const q = regionQuality(est, pooledStats(regions.map((r) => r.stats)), global);
+  const q = regionQuality(
+    est,
+    pooledStats(regions.map((r) => r.stats)),
+    global,
+    flickerAt(est.peakHz),
+  );
   const level: QualityLevel = q.level === 'good' ? 'fair' : q.level;
   return {
     regions: ids,

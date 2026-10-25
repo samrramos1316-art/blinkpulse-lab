@@ -3,7 +3,9 @@ import { BpmSmoother, fuseRegions, weightedMedian, type RegionResult } from './f
 import { levelFromSqi, lowerLevel, motionFlag, regionFlags, regionQuality } from './quality.ts';
 import { RgbTrace, type TraceSample } from './rgbTrace.ts';
 import {
+  backgroundPolygons,
   boundingBox,
+  mergeStats,
   pointInPolygon,
   regionPolygons,
   roiStats,
@@ -86,6 +88,65 @@ describe('roi', () => {
     expect(s.r).toBe(105);
     expect(s.g).toBe(55);
     expect(s.b).toBe(25);
+  });
+
+  it('background rectangles sit beside the face box and are dropped when mostly outside', () => {
+    // Face box x 200-300 (W = 100), y 100-250 (H = 150).
+    const face = [
+      { x: 200, y: 100 },
+      { x: 300, y: 250 },
+    ];
+    const rects = backgroundPolygons(face, 640, 480);
+    expect(rects).toHaveLength(2);
+    // Left: from 200 - 25 - 30 = 145 to 175; right: 325 to 355; y 130 to 190.
+    expect(rects[0]).toEqual([
+      { x: 145, y: 130 },
+      { x: 175, y: 130 },
+      { x: 175, y: 190 },
+      { x: 145, y: 190 },
+    ]);
+    expect(rects[1]?.[0]).toEqual({ x: 325, y: 130 });
+    expect(rects[1]?.[2]).toEqual({ x: 355, y: 190 });
+    // Face near the left edge: the left rectangle would be outside the frame.
+    const nearEdge = backgroundPolygons(
+      [
+        { x: 20, y: 100 },
+        { x: 120, y: 250 },
+      ],
+      640,
+      480,
+    );
+    expect(nearEdge).toHaveLength(1);
+    expect(nearEdge[0]?.[0]?.x).toBe(145);
+    expect(backgroundPolygons([], 640, 480)).toEqual([]);
+  });
+
+  it('mergeStats weights by pixels, as if the polygons were one', () => {
+    const a = {
+      r: 100,
+      g: 100,
+      b: 100,
+      polygonPixels: 100,
+      coverage: 1,
+      saturatedFraction: 0,
+      meanLuma: 100,
+    };
+    const b = {
+      r: 40,
+      g: 40,
+      b: 40,
+      polygonPixels: 300,
+      coverage: 0.5,
+      saturatedFraction: 0.5,
+      meanLuma: 60,
+    };
+    const m = mergeStats([a, b]);
+    // Accepted pixels: 100 and 150.
+    expect(m?.g).toBeCloseTo((100 * 100 + 40 * 150) / 250, 10);
+    expect(m?.coverage).toBeCloseTo(250 / 400, 10);
+    expect(m?.saturatedFraction).toBeCloseTo(150 / 400, 10);
+    expect(m?.meanLuma).toBeCloseTo((100 * 100 + 60 * 300) / 400, 10);
+    expect(mergeStats([])).toBeNull();
   });
 });
 

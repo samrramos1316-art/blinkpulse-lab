@@ -22,7 +22,7 @@ import {
   HOP_MS,
   WINDOW_MS,
 } from '../rppg/hrEstimator.ts';
-import { FPS_MIN, FPS_WARN, SQI_FAIR, SQI_GOOD } from '../rppg/quality.ts';
+import { FLICKER_SQI, FPS_MIN, FPS_WARN, SQI_FAIR, SQI_GOOD } from '../rppg/quality.ts';
 import { MAX_ABS_PITCH_DEG, MAX_ABS_YAW_DEG } from '../vision/headPose.ts';
 
 export interface ParameterGroup {
@@ -75,6 +75,10 @@ export const PARAMETERS: readonly ParameterGroup[] = [
       {
         name: 'Frame rate',
         value: `quality lowered below ${String(FPS_WARN)} fps, no estimate below ${String(FPS_MIN)} fps`,
+      },
+      {
+        name: 'Flickering light',
+        value: `quality lowered when the background beside the face has a signal quality index of ${FLICKER_SQI.toFixed(2)} or more at the pulse rate`,
       },
     ],
   },

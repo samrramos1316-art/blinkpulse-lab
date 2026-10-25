@@ -217,3 +217,23 @@ describe('SessionSummary on a synthetic 5-minute session (Patch B tests)', () =>
     expect(bins[0]?.coverage).toBeGreaterThan(0.99);
   });
 });
+
+describe('SessionSummary over a long session (SPEC_AMENDMENT_04 F5)', () => {
+  it('minutes far behind keep their exact summary; late data for them is ignored', () => {
+    const s = new SessionSummary();
+    feed(s, 0, 60_000, 33);
+    s.addEvent(event(5_000, 200));
+    s.addEvent(event(30_000, 600, 'long_closure'));
+    feed(s, 60_000, 120_000, 33);
+    const before = s.bins()[0];
+    // Twelve more minutes: minute 0 is now more than 10 minutes behind and frozen.
+    feed(s, 120_000, 13 * 60_000, 33);
+    expect(s.bins()).toHaveLength(13);
+    expect(s.bins()[0]).toEqual(before);
+    // An event starting in the frozen minute changes nothing there.
+    s.addEvent(event(40_000, 300));
+    expect(s.bins()[0]).toEqual(before);
+    expect(before?.blinkCount).toBe(2);
+    expect(before?.longClosures).toBe(1);
+  });
+});

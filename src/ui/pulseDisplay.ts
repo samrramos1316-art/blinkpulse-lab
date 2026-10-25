@@ -15,6 +15,7 @@ export const FLAG_ORDER: readonly PulseFlag[] = [
   'dark',
   'saturated',
   'lightingChange',
+  'flicker',
   'lowCoverage',
   'lowFps',
   'crossCheck',

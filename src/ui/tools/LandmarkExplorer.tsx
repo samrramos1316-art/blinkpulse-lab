@@ -14,7 +14,7 @@ import {
 import { captureStatusText } from '../captureStatus.ts';
 import { Footer } from '../components/Footer.tsx';
 import { PlayIcon, StopIcon } from '../icons/Icons.tsx';
-import { REGION_IDS, regionPolygons } from '../../rppg/roi.ts';
+import { backgroundPolygons, REGION_IDS, regionPolygons } from '../../rppg/roi.ts';
 import { REGION_LABEL } from '../copy.ts';
 import { PRESETS, nearestLandmark, parseIndexList, type PresetId } from './explorerModel.ts';
 
@@ -184,6 +184,25 @@ function drawOverlay(canvas: HTMLCanvasElement, rt: ExplorerRuntime): void {
         },
       );
       label(REGION_LABEL[id], c.x - 20, c.y + 4);
+    }
+    // Background reference for the flicker check (Phase 6): not skin, beside the face.
+    const mapped = pts.map((p) => ({ x: xOf(p), y: p.y * h }));
+    ctx.setLineDash([2, 4]);
+    for (const rect of backgroundPolygons(mapped, w, h)) {
+      ctx.beginPath();
+      rect.forEach((p, i) => {
+        if (i === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      });
+      ctx.closePath();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = shadow;
+      ctx.stroke();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = fg;
+      ctx.stroke();
+      const corner = rect[0];
+      if (corner) label('Background', corner.x + 4, corner.y + 14);
     }
     ctx.setLineDash([]);
   }

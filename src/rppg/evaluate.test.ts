@@ -73,6 +73,31 @@ describe('trace CSV', () => {
     expect(back[0]?.motion?.iodPx).toBe(100);
     expect(back[1]).toMatchObject({ tMs: 40, faceValid: false, gapBefore: true, motion: null });
     expect(back[1]?.regions.forehead).toBeNull();
+    expect(back[0]?.background).toBeNull();
+  });
+
+  it('background reference round-trips; files recorded before it still load', () => {
+    const f = syntheticFrames(70, 100)[0] as PulseFrame;
+    const bg = {
+      r: 120.5,
+      g: 121.25,
+      b: 119,
+      polygonPixels: NaN,
+      coverage: 0.9,
+      saturatedFraction: 0.01,
+      meanLuma: 120,
+    };
+    const back = parseFramesCsv(framesToCsv([{ ...f, background: bg }]));
+    expect(back[0]?.background).toMatchObject({ r: 120.5, g: 121.25, b: 119, coverage: 0.9 });
+    // An older file: the six background columns are missing.
+    const old = framesToCsv([f])
+      .split('\n')
+      .map((line) => line.split(',').slice(0, -6).join(','))
+      .join('\n');
+    expect(old.includes('background')).toBe(false);
+    const parsed = parseFramesCsv(old);
+    expect(parsed[0]?.background).toBeNull();
+    expect(parsed[0]?.regions.forehead?.g).toBeCloseTo(f.regions.forehead?.g ?? NaN, 3);
   });
 
   it('estimate rows match the header', () => {
@@ -87,6 +112,7 @@ describe('trace CSV', () => {
       level: 'fair',
       rawBpm: 71,
       fps: 30,
+      backgroundChecked: true,
     };
     expect(estimateRow(u, 5).split(',')).toHaveLength(ESTIMATE_HEADER.length);
   });

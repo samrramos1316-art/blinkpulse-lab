@@ -53,6 +53,98 @@ export function regionPolygons(points: readonly Point[]): Record<RegionId, Point
   return { forehead, leftCheek: poly(LEFT_CHEEK), rightCheek: poly(RIGHT_CHEEK) };
 }
 
+/**
+ * Background reference (PROJECT_SPEC 2 Phase 6, 5.4 "Flicker"): two rectangles beside
+ * the face, level with the eyes and nose, used to see whether a periodic light change
+ * is in the whole scene rather than in the skin. With the face's landmark bounding box
+ * (width W, height H), each rectangle starts BACKGROUND.gap x W outside the box and is
+ * BACKGROUND.width x W wide, from BACKGROUND.top to BACKGROUND.bottom of H. Starting
+ * values, chosen to clear the ears and stay above the shoulders on a frontal face;
+ * like the skin regions, to be checked live in the Landmark Explorer. A rectangle
+ * less than half inside the frame is dropped.
+ */
+export const BACKGROUND = { gap: 0.25, width: 0.3, top: 0.2, bottom: 0.6 } as const;
+/** Every BACKGROUND_STEP-th row and column of the background is read (cost, Phase 6). */
+export const BACKGROUND_STEP = 2;
+
+export function backgroundPolygons(
+  points: readonly Point[],
+  frameW: number,
+  frameH: number,
+): Point[][] {
+  if (points.length === 0) return [];
+  let x0 = Infinity;
+  let y0 = Infinity;
+  let x1 = -Infinity;
+  let y1 = -Infinity;
+  for (const p of points) {
+    x0 = Math.min(x0, p.x);
+    y0 = Math.min(y0, p.y);
+    x1 = Math.max(x1, p.x);
+    y1 = Math.max(y1, p.y);
+  }
+  const w = x1 - x0;
+  const h = y1 - y0;
+  if (!(w > 0 && h > 0)) return [];
+  const top = y0 + BACKGROUND.top * h;
+  const bottom = y0 + BACKGROUND.bottom * h;
+  const bw = BACKGROUND.width * w;
+  const rects: [number, number][] = [
+    [x0 - BACKGROUND.gap * w - bw, x0 - BACKGROUND.gap * w],
+    [x1 + BACKGROUND.gap * w, x1 + BACKGROUND.gap * w + bw],
+  ];
+  const out: Point[][] = [];
+  for (const [left, right] of rects) {
+    const insideW = Math.min(right, frameW) - Math.max(left, 0);
+    const insideH = Math.min(bottom, frameH) - Math.max(top, 0);
+    if (insideW < 0.5 * bw || insideH < 0.5 * (bottom - top)) continue;
+    const l = Math.max(left, 0);
+    const r = Math.min(right, frameW);
+    const t = Math.max(top, 0);
+    const b = Math.min(bottom, frameH);
+    out.push([
+      { x: l, y: t },
+      { x: r, y: t },
+      { x: r, y: b },
+      { x: l, y: b },
+    ]);
+  }
+  return out;
+}
+
+/** Combine the statistics of several polygons as if they were one (pixel-weighted). */
+export function mergeStats(list: readonly RoiStats[]): RoiStats | null {
+  let n = 0;
+  let accepted = 0;
+  let saturated = 0;
+  let sr = 0;
+  let sg = 0;
+  let sb = 0;
+  let luma = 0;
+  for (const s of list) {
+    const a = s.coverage * s.polygonPixels;
+    n += s.polygonPixels;
+    luma += s.meanLuma * s.polygonPixels;
+    saturated += s.saturatedFraction * s.polygonPixels;
+    if (a > 0) {
+      accepted += a;
+      sr += s.r * a;
+      sg += s.g * a;
+      sb += s.b * a;
+    }
+  }
+  if (n === 0) return null;
+  return {
+    r: accepted ? sr / accepted : NaN,
+    g: accepted ? sg / accepted : NaN,
+    b: accepted ? sb / accepted : NaN,
+    polygonPixels: n,
+    coverage: accepted / n,
+    saturatedFraction: saturated / n,
+    meanLuma: luma / n,
+  };
+}
+
 export interface Box {
   x: number;
   y: number;
@@ -113,9 +205,16 @@ export interface RoiStats {
 
 /**
  * Statistics of the pixels inside `poly` (frame pixel coordinates). `rgba` holds
- * the box's pixels row by row (ImageData layout). Pixel centres are tested.
+ * the box's pixels row by row (ImageData layout). Pixel centres are tested. `step`
+ * > 1 uses every step-th row and column only (the background reference, where a
+ * mean light level is enough); polygonPixels then counts the pixels used.
  */
-export function roiStats(rgba: ArrayLike<number>, box: Box, poly: readonly Point[]): RoiStats {
+export function roiStats(
+  rgba: ArrayLike<number>,
+  box: Box,
+  poly: readonly Point[],
+  step = 1,
+): RoiStats {
   let n = 0;
   let accepted = 0;
   let saturated = 0;
@@ -123,9 +222,9 @@ export function roiStats(rgba: ArrayLike<number>, box: Box, poly: readonly Point
   let sg = 0;
   let sb = 0;
   let luma = 0;
-  for (let row = 0; row < box.h; row++) {
+  for (let row = 0; row < box.h; row += step) {
     const y = box.y + row + 0.5;
-    for (let col = 0; col < box.w; col++) {
+    for (let col = 0; col < box.w; col += step) {
       if (!pointInPolygon(box.x + col + 0.5, y, poly)) continue;
       const k = 4 * (row * box.w + col);
       const r = rgba[k] as number;

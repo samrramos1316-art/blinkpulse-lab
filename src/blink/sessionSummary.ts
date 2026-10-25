@@ -11,6 +11,11 @@
  * A bin is usable when valid time covers >= 70% of the full minute. Unusable bins
  * report null for every value (shown as gaps, never zeros). A usable bin with no
  * blinks reports a count of 0 and null durations. Descriptive only.
+ *
+ * Long sessions (SPEC_AMENDMENT_04 F5): a minute more than KEEP_DETAIL_MINUTES
+ * behind the newest one keeps only its summary; its frame intervals and events are
+ * freed. Data for such a minute that arrives later (only possible from a single eye
+ * closure lasting over 10 minutes) is ignored.
  */
 
 import { mean, median } from '../dsp/stats.ts';
@@ -21,6 +26,8 @@ export const BIN_MS = 60_000;
 export const MIN_COVERAGE = 0.7;
 /** PROJECT_SPEC 5.1 asks the camera for >= 24 fps; below it a bin is marked low FPS. */
 export const LOW_FPS = 24;
+/** Minutes behind the newest one that keep their per-frame detail. */
+export const KEEP_DETAIL_MINUTES = 10;
 
 export type LostReason = 'noFace' | 'headTurned' | 'gap' | 'calibrating';
 export const LOST_REASONS: readonly LostReason[] = ['noFace', 'headTurned', 'gap', 'calibrating'];
@@ -72,6 +79,8 @@ interface Acc {
   closedMs: number;
   elapsedMs: number;
   cached: MinuteBin | null;
+  /** Summary fixed, detail freed (F5). */
+  frozen: boolean;
 }
 
 const emptyLost = (): Record<LostReason, number> => ({
@@ -81,11 +90,24 @@ const emptyLost = (): Record<LostReason, number> => ({
   calibrating: 0,
 });
 
+const emptyAcc = (): Acc => ({
+  validMs: 0,
+  lostMs: emptyLost(),
+  dts: [],
+  events: [],
+  closedMs: 0,
+  elapsedMs: 0,
+  cached: null,
+  frozen: false,
+});
+
 export class SessionSummary {
   private readonly maxGapMs: number;
   private t0 = NaN;
   private prev: SessionSample | null = null;
   private readonly accs: Acc[] = [];
+  /** Bins below this index are frozen. */
+  private frozenUpTo = 0;
 
   constructor(maxGapMs = DEFAULT_MAX_GAP_MS) {
     this.maxGapMs = maxGapMs;
@@ -93,6 +115,11 @@ export class SessionSummary {
 
   get started(): boolean {
     return !Number.isNaN(this.t0);
+  }
+
+  /** Monotonic time of the first sample (the session's time origin), or NaN. */
+  get startMs(): number {
+    return this.t0;
   }
 
   /** Session time of a monotonic timestamp (ms since the first sample). */
@@ -140,6 +167,7 @@ export class SessionSummary {
     this.t0 = NaN;
     this.prev = null;
     this.accs.length = 0;
+    this.frozenUpTo = 0;
   }
 
   bins(): MinuteBin[] {
@@ -150,20 +178,24 @@ export class SessionSummary {
   }
 
   private acc(i: number): Acc {
-    while (this.accs.length <= i) {
-      this.accs.push({
-        validMs: 0,
-        lostMs: emptyLost(),
-        dts: [],
-        events: [],
-        closedMs: 0,
-        elapsedMs: 0,
-        cached: null,
-      });
-    }
+    while (this.accs.length <= i) this.accs.push(emptyAcc());
+    this.freeze(this.accs.length - 1 - KEEP_DETAIL_MINUTES);
     const acc = this.accs[i] as Acc;
+    // Late data for a frozen minute goes to a throwaway accumulator (see header).
+    if (acc.frozen) return emptyAcc();
     acc.cached = null;
     return acc;
+  }
+
+  /** Freeze every bin up to and including `last`. */
+  private freeze(last: number): void {
+    for (; this.frozenUpTo <= last; this.frozenUpTo++) {
+      const acc = this.accs[this.frozenUpTo] as Acc;
+      acc.cached ??= summarise(acc, this.frozenUpTo);
+      acc.dts = [];
+      acc.events = [];
+      acc.frozen = true;
+    }
   }
 
   /** Split [a, b) (session ms) across bins. */

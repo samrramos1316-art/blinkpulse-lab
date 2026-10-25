@@ -630,3 +630,82 @@ scaling and parabolic refinement, peak finding (matches SciPy's plateau, distanc
 rules), EAR and calibration (5.3), the blink state machine, the metrics windows, the frame clock's
 gap priorities, timestamp-source choice, the controller's start/stop races, the PVT timing and
 scoring, and the indicator's gates (coverage, frame rate, blinks; a reason, never a number).
+
+## Phase 6: Extras (2026-10-24, author's request)
+
+The author asked for Phase 6, then long-term tracking (Phase 7). Phases 3, 4, and 4B still wait for
+their validation runs (V1, V2b, V3). Like Phase 5, this was built ahead of them at the author's
+request; the phase gates for those validations remain open. Decisions and design:
+`SPEC_AMENDMENT_04.md` Patch E.
+
+**Verified**
+
+- `npm run check` passes (59 files, 595 tests after Phase 7).
+- Eye-comfort reminder: pure logic with 9 unit tests (off by default, pooled period, quality gate,
+  baseline minutes excluded, 20-minute minimum cooldown, history baseline, settings sanitised). In
+  the browser, the settings panel renders, and the settings persist in `localStorage`.
+- Flicker check:
+  - Synthetic tests: every region flagged and lowered one step when the background varies at the
+    pulse rate; nothing flagged at a different rate.
+  - False flags on a steady background: 3 of 1600 hops.
+  - Browser, synthetic face: 72 BPM at Good, with no flicker flag and no errors.
+  - Trace files gain background columns, and older files still load (tested).
+- Performance with the background check: 2.70 to 3.45 ms median per frame, against 1.70 to 2.80 ms
+  for the previous build, in alternating runs (n = 3 + 3, twice). All under the 4 ms budget, so the
+  Web Worker item is not needed.
+- HRV limits tool: `npm run hrv:limits`, with 3 unit tests; results in `docs/METHODS.md`.
+
+**Not verified**
+
+- A reminder firing in a browser (needs more than 8 minutes of reduced blinking), and the system
+  notification on a real desktop.
+- The background rectangles' position on a real face (Landmark Explorer preset added), and the
+  flicker check under real lamps or screens.
+- HRV against a real reference RR log (none recorded).
+
+**Deviations**
+
+- The reminder can also show a silent system notification (author's decision, 2026-10-24). Its
+  settings are stored in `localStorage`, beyond SPEC_AMENDMENT_02 Part 3's setup flag and theme.
+
+## Phase 7: Long-term tracking (2026-10-24, author's request)
+
+The author asked that results come from long-term tracking, without watching the app. Design and
+the author's decisions (history opt-in and on this device only, with 90-day auto-delete; banner
+plus an optional notification; history shows blink, pulse at Fair or better, and the indicator):
+`SPEC_AMENDMENT_04.md` Patch F.
+
+**Built**
+
+- History (`src/history/history.ts`, IndexedDB store, `useHistory`): one row per finished minute,
+  with 90-day retention, CSV export, and Delete all.
+- History view (header button): day plots, a per-day table, hour of day, one day's minutes, and
+  the indicator as minutes per band in approved wording.
+- Mini window (Document Picture-in-Picture), which keeps the page measuring while it is open.
+- Tracking card: mini window, history on or off (turning it off asks whether to delete), and the
+  reminder.
+- Long-session memory: minutes more than 10 minutes behind keep only their summary.
+
+**Verified**
+
+- `npm run check`: 59 test files, 595 tests pass.
+- Browser, production build, synthetic face blinking 15 per minute:
+  - With history on, 2 minutes were saved after 2.7 min, each at 15.0 blinks per minute, and Stop
+    saved the 32 s minute in progress.
+  - The history view withheld the day's blink values (2 of 10 usable minutes).
+  - The CSV downloaded with 3 rows, and Delete all left 0.
+  - No network requests after load. The only CSP reports were the known MediaPipe logger.
+- Layout: no horizontal scrolling at 360 and 1280 px, in light and dark, with 200 seeded rows.
+- Mini window in headed Chrome (fake camera): it opened and showed the app's live status.
+  - The prototype test showed that a hidden main page keeps getting every frame while a mini
+    window is open, and gets none when the window is covered without one.
+
+**Not verified**
+
+- **The mini window staying open.** In every automated run Chrome closed it after 4 to 15 s, also
+  on a plain test page, so the cause is outside the app. It may be that the automated window never
+  had keyboard focus. The author should try it on the live site: Start, Calibrate, open the mini
+  window, then work in another window for a few minutes.
+- History over real days, the 90-day deletion with real dates (tested only as a unit), and an
+  all-day session's memory use in a browser.
+- Losing the minute in progress when the tab is closed (expected, not tested).

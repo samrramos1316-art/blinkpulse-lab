@@ -4,6 +4,8 @@
 
 > **AMENDED:** Also read `SPEC_AMENDMENT_02.md` (visual design and ease of use). It extends Section 5.5 and never overrides product, privacy, wording, or accessibility rules.
 
+> **AMENDED:** `SPEC_AMENDMENT_04.md` details Phase 6 (eye-comfort reminder, flicker check, HRV limits) and adds Phase 7, long-term tracking: an opt-in history on this device, a mini window, and a history view. It never overrides a product, privacy, wording, or accessibility rule.
+
 > Working name. Rename freely.
 > An educational, fully on-device signal-processing project: estimating blink metrics and pulse rate from webcam video, with every key algorithm written by hand and validated against reference data.
 

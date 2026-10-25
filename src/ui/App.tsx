@@ -1,6 +1,11 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useBlink } from '../app/useBlink.ts';
 import { useCapture } from '../app/useCapture.ts';
+import { useComfortReminder } from '../app/useComfortReminder.ts';
+import { useHistory } from '../app/useHistory.ts';
+import { useMiniWindow } from '../app/useMiniWindow.ts';
+import { dayKey } from '../history/history.ts';
 import { useWakeLock } from '../app/useWakeLock.ts';
 import { blinkRateCard, closedFractionCard } from './blinkDisplay.ts';
 import { indicatorCard } from './indicatorDisplay.ts';
@@ -12,6 +17,12 @@ import { FaceOverlay } from './components/FaceOverlay.tsx';
 import { IndicatorGauge } from './components/IndicatorGauge.tsx';
 import { IndicatorPanel } from './components/IndicatorPanel.tsx';
 import { PulsePanel } from './components/PulsePanel.tsx';
+import { HistoryView } from './components/HistoryView.tsx';
+import { MiniView } from './components/MiniView.tsx';
+import { ReminderBanner } from './components/ReminderBanner.tsx';
+import { TrackingCard } from './components/TrackingCard.tsx';
+import { TRACKING_COPY } from './copy.ts';
+import { useNow } from './useNow.ts';
 import { SignalLab } from './components/SignalLab.tsx';
 import { AboutDialog } from './components/AboutDialog.tsx';
 import { Footer } from './components/Footer.tsx';
@@ -37,11 +48,17 @@ export function App({ initialSetupOpen, initialLab = false }: AppProps) {
   const blink = useBlink(capture);
   const [setupOpen, setSetupOpen] = useState(() => initialSetupOpen ?? !readSetupDone());
   const [showTiming, setShowTiming] = useState(import.meta.env.DEV);
-  const [lab, setLab] = useState(initialLab);
+  const [view, setView] = useState<'signals' | 'lab' | 'history'>(initialLab ? 'lab' : 'signals');
+  const toggle = (v: 'lab' | 'history') => {
+    setView((cur) => (cur === v ? 'signals' : v));
+  };
   const [aboutOpen, setAboutOpen] = useState(false);
 
   const live = capture.snapshot.status === 'running';
   useWakeLock(live);
+  const history = useHistory(blink, capture);
+  const reminder = useComfortReminder(blink.snapshot.session, history.baseline);
+  const mini = useMiniWindow();
   const pulse = pulseCard(blink.pulse, live, blink.snapshot.faceStatus);
   const regionLevels = Object.fromEntries((blink.pulse?.regions ?? []).map((r) => [r.id, r.level]));
   const rateCard = blinkRateCard(blink.snapshot, live);
@@ -53,6 +70,15 @@ export function App({ initialSetupOpen, initialLab = false }: AppProps) {
     capture.start();
   };
   const calibrating = blink.snapshot.calibration.phase === 'running';
+  const status = liveStatusText(capture.snapshot, blink.snapshot, blink.landmarker.status);
+  const today = dayKey(useNow());
+  const historyNote =
+    history.enabled && history.rows
+      ? TRACKING_COPY.history.saved(
+          history.rows.filter((r) => dayKey(r.startMs) === today).length,
+          history.rows.length,
+        )
+      : null;
 
   return (
     <>
@@ -73,9 +99,15 @@ export function App({ initialSetupOpen, initialLab = false }: AppProps) {
           setAboutOpen(true);
         }}
         lab={{
-          open: lab,
+          open: view === 'lab',
           onToggle: () => {
-            setLab((v) => !v);
+            toggle('lab');
+          },
+        }}
+        history={{
+          open: view === 'history',
+          onToggle: () => {
+            toggle('history');
           },
         }}
       />
@@ -86,6 +118,7 @@ export function App({ initialSetupOpen, initialLab = false }: AppProps) {
         }}
       />
       <main id="main" className="app-main" tabIndex={-1}>
+        <ReminderBanner open={reminder.bannerOpen} onDismiss={reminder.dismiss} />
         <div className="layout">
           <PreviewPanel
             videoRef={capture.videoRef}
@@ -94,7 +127,7 @@ export function App({ initialSetupOpen, initialLab = false }: AppProps) {
             onToggleTiming={() => {
               setShowTiming((v) => !v);
             }}
-            status={liveStatusText(capture.snapshot, blink.snapshot, blink.landmarker.status)}
+            status={status}
             tracking={{
               blink: blink.snapshot,
               inferenceMs: blink.inferenceMs,
@@ -155,8 +188,10 @@ export function App({ initialSetupOpen, initialLab = false }: AppProps) {
             </div>
           )}
         </div>
-        {lab ? (
+        {view === 'lab' ? (
           <SignalLab pulse={blink.pulse} />
+        ) : view === 'history' ? (
+          <HistoryView history={history} />
         ) : (
           <section className="card plots" aria-labelledby="plots-title">
             <h2 id="plots-title" className="section-title">
@@ -211,7 +246,30 @@ export function App({ initialSetupOpen, initialLab = false }: AppProps) {
             />
           </section>
         )}
+        <TrackingCard
+          mini={mini}
+          history={history}
+          reminder={reminder}
+          onOpenHistory={() => {
+            setView('history');
+          }}
+        />
       </main>
+      {mini.container
+        ? createPortal(
+            <MiniView
+              live={live}
+              status={status}
+              blinkRate={rateCard}
+              pulse={pulse}
+              historyNote={historyNote}
+              reminder={{ open: reminder.bannerOpen, dismiss: reminder.dismiss }}
+              onStart={start}
+              onStop={capture.stop}
+            />,
+            mini.container,
+          )
+        : null}
       <Footer />
     </>
   );

@@ -9,6 +9,7 @@ import { openCamera } from '../capture/camera.ts';
 import { CameraError } from '../capture/cameraErrors.ts';
 import { startFrameLoop } from '../capture/frameLoop.ts';
 import { CaptureController, type CaptureDeps, type CaptureSnapshot } from './captureController.ts';
+import { miniWindowState } from './miniWindowState.ts';
 
 function browserDeps(getVideo: () => HTMLVideoElement | null): CaptureDeps {
   const video = () => {
@@ -19,11 +20,14 @@ function browserDeps(getVideo: () => HTMLVideoElement | null): CaptureDeps {
   return {
     openCamera: () => openCamera(video()),
     startFrameLoop: (onFrame) => startFrameLoop(video(), onFrame),
-    isHidden: () => document.visibilityState === 'hidden',
+    // An open mini window keeps the page measuring while it is hidden (SPEC_AMENDMENT_04 F1).
+    isHidden: () => document.visibilityState === 'hidden' && !miniWindowState.isOpen(),
     onVisibilityChange: (callback) => {
       document.addEventListener('visibilitychange', callback);
+      const unsubscribe = miniWindowState.subscribe(callback);
       return () => {
         document.removeEventListener('visibilitychange', callback);
+        unsubscribe();
       };
     },
     setInterval: (callback, ms) => window.setInterval(callback, ms),

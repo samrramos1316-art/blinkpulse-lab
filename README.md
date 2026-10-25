@@ -4,10 +4,11 @@ An experimental, fully on-device signal-processing project that estimates **blin
 **pulse rate** from webcam video, with every key algorithm (FFT, filters, resampling, peak
 detection, plots) written by hand and validated against reference data.
 
-> **Status: all features built (Phases 0-5); no validation run yet.** The app tracks face
+> **Status: all features built (Phases 0-7); no validation run yet.** The app tracks face
 > landmarks on the device and shows blink rate, eye-closed fraction, a per-minute blink timeline,
 > an estimated pulse rate from three skin regions with a quality level, an experimental eye-closure
-> indicator, a Signal Lab, and a study mode with its analysis script. None of these has been
+> indicator, a Signal Lab, a study mode with its analysis script, and optional long-term tracking
+> (history on this device, a mini window, an eye-comfort reminder). None of these has been
 > validated on real people yet: validations V1 (blinks), V2 (pulse), and V3 (the indicator study)
 > need recordings, a reference device, and participants. The numbers so far come from synthetic
 > signals (see `docs/METHODS.md`).
@@ -95,6 +96,8 @@ npm run check      # typecheck + lint + format check + tests
 npm run score:v1 -- labels.csv detections.csv   # score validation V1 from exported CSVs
 npm run eval -- frames.csv reference.csv       # offline pulse evaluation (V2)
 npm run ppg:ref -- ppg.csv reference.csv       # reference BPM from a ground-truth PPG (V2a)
+npm run bench:pulse                            # pulse at lower signal quality (synthetic)
+npm run hrv:limits                             # why HRV is not shown (synthetic, PROJECT_SPEC 7.4)
 ```
 
 ### On a phone
@@ -118,6 +121,25 @@ camera. Phone cameras and processors vary; check the measured frame rate under "
 the raw colour channels, the POS output, the band-pass filter, the filtered waveform with beats,
 and the spectrum, each with a short caption. **About** (header button): the disclaimer, a methods
 summary, limitations, and the fixed processing parameters.
+
+### Long-term tracking (optional, off by default)
+
+The "Tracking and reminders" card lets the app run while you work, so results come from days of
+ordinary use rather than from watching it:
+
+- **Mini window** (Chrome and Edge on a computer): a small window stays on top with the latest
+  values, and the app keeps measuring while you use other windows. Without it, keep the app's
+  window visible, for example side by side; a hidden window pauses measuring.
+- **History on this device:** when you turn it on, each finished minute is saved as numbers in
+  this browser only. That covers blink measures, the pulse values the app showed, and the
+  eye-closure indicator. The **History** view shows days, hours of the day, and single days, each
+  value with its number of minutes. Export CSV and Delete all are one click away, and minutes are
+  deleted after 90 days. No video, images, or face landmarks are ever saved, and nothing is
+  uploaded.
+- **Eye-comfort reminder:** a gentle note when you have blinked much less than your usual rate for
+  a few minutes, optionally also as a silent system notification. No sound.
+
+Details: `SPEC_AMENDMENT_04.md`.
 
 Developer pages: `#explorer` (Landmark Explorer, to check landmark indices on live video),
 `#v1` (validation V1: analyse a local recording, hand-label blinks, score), and `#v2` (validation
@@ -163,7 +185,7 @@ null and negative results, once the validation runs (V1, V2, V3) have been done.
 
 ## Project documents
 
-- `PROJECT_SPEC.md`: source of truth, amended by `SPEC_AMENDMENT_01.md` and `SPEC_AMENDMENT_02.md`
+- `PROJECT_SPEC.md`: source of truth, amended by `SPEC_AMENDMENT_01.md` to `SPEC_AMENDMENT_04.md`
 - `CLAUDE.md`: working rules for AI-assisted development
 - `docs/METHODS.md`: equations, pipeline diagram, parameters, tests and browser checks
 - `docs/VALIDATION.md`: validation procedures (V1, V2, V3) and, later, their results
@@ -190,6 +212,9 @@ explain, every algorithm.
   analysis script, tests): AI-assisted. The protocol's decisions are the author's to make.
 - Phase 5 (Signal Lab, About dialog, accessibility and privacy checks, docs, demo script):
   AI-assisted.
+- Phase 6 (eye-comfort reminder, flicker check, HRV limits tool, tests): AI-assisted.
+- Phase 7 (history on this device, history view, mini window, tests): AI-assisted. The decisions
+  on storage, notifications, and what history shows are the author's.
 
 ## Open source
 

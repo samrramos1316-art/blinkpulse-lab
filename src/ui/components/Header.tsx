@@ -11,6 +11,8 @@ interface HeaderProps {
   onOpenAbout: () => void;
   /** Signal Lab view toggle. */
   lab: { open: boolean; onToggle: () => void };
+  /** History view toggle (SPEC_AMENDMENT_04 F4). */
+  history: { open: boolean; onToggle: () => void };
   calibrate: { enabled: boolean; label: string; onClick: () => void };
 }
 
@@ -21,6 +23,7 @@ export function Header({
   onOpenGuide,
   onOpenAbout,
   lab,
+  history,
   calibrate,
 }: HeaderProps) {
   // Stop is offered while waiting for permission too, so the request can be abandoned.
@@ -60,6 +63,14 @@ export function Header({
             onClick={lab.onToggle}
           >
             Signal Lab
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            aria-pressed={history.open}
+            onClick={history.onToggle}
+          >
+            History
           </button>
           {status === 'running' ? (
             <button

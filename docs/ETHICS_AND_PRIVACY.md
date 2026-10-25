@@ -98,14 +98,16 @@ Known gaps:
 
 ## Data handling summary (Phase 5)
 
-| Data                              | Where it lives                  | Kept?                                    |
-| --------------------------------- | ------------------------------- | ---------------------------------------- |
-| Video frames                      | `<video>` element, canvas reads | Never stored; discarded each frame       |
-| Face landmarks                    | Memory, per frame               | Never stored or exported                 |
-| Skin-region colour averages       | Memory, last few seconds        | Exported only by "Record numeric trace"  |
-| Blink events, timeline, indicator | Memory, current session         | Exported only after a confirmation       |
-| Study session (`#study`)          | Memory                          | Exported only when the researcher clicks |
-| Theme and "setup completed" flag  | `localStorage`                  | Yes (no measurements)                    |
+| Data                              | Where it lives                  | Kept?                                     |
+| --------------------------------- | ------------------------------- | ----------------------------------------- |
+| Video frames                      | `<video>` element, canvas reads | Never stored; discarded each frame        |
+| Face landmarks                    | Memory, per frame               | Never stored or exported                  |
+| Skin-region colour averages       | Memory, last few seconds        | Exported only by "Record numeric trace"   |
+| Blink events, timeline, indicator | Memory, current session         | Exported only after a confirmation        |
+| Study session (`#study`)          | Memory                          | Exported only when the researcher clicks  |
+| Theme and "setup completed" flag  | `localStorage`                  | Yes (no measurements)                     |
+| Reminder settings, history on/off | `localStorage`                  | Yes (no measurements)                     |
+| History (opt-in, off by default)  | IndexedDB, this browser only    | Per-minute numbers, deleted after 90 days |
 
 - **Privacy checks in Phase 5** (headless Chrome, production build, synthetic face): no request to
   any other host during first-run setup, measuring, the Signal Lab, the About dialog, theme changes,
@@ -138,3 +140,24 @@ Known gaps:
   person and is not shown to study participants during a session.
 - The validation samples will be small and may not be varied; the results must say who was and
   was not represented, without identifying anyone.
+
+## Long-term history and reminders (SPEC_AMENDMENT_04, 2026-10-24)
+
+- **History is opt-in and off by default** (author's decision).
+  - When it is on, each finished minute is saved in this browser's IndexedDB as numbers: blink
+    measures, the pulse values the app showed, and the eye-closure indicator. No video, images,
+    face landmarks, or EAR traces are saved.
+  - Nothing is uploaded, and there is no account or sync.
+  - Rows older than 90 days are deleted automatically.
+  - "Delete all history" removes every row, and turning history off asks whether to delete them.
+  - "Export CSV" saves the rows as a file the user keeps.
+  - Study mode never writes to history.
+- **Rows carry a random session id** (a new one per camera session) and wall-clock times. They do
+  not carry a name, a participant code, or anything identifying.
+- **Notifications** for the eye-comfort reminder are optional and off by default. They are silent,
+  created by the page itself (no push service), and ask for the browser's permission only when
+  turned on.
+- **The mini window** is part of the same page. It shows the same numbers and adds no data flow.
+- **Privacy check** (production build, headless Chrome): with history on, during about 3 minutes
+  of measuring, Stop, the history view, CSV export, and Delete all, there were no network requests
+  after the page and model loaded.

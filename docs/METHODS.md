@@ -162,6 +162,7 @@ run while `presentedFrames` showed none, because each long interval was followed
 On `visibilitychange` to hidden, frames are ignored (analysis paused) and the pause is recorded
 as a `hidden` gap. The status line shows "Keep this window visible (e.g. side-by-side) for
 measurements." while hidden and a "Paused while this window was hidden" note afterwards.
+Since SPEC_AMENDMENT_04 F1, the page counts as hidden only when no mini window is open.
 
 ### Browser measurement (fake camera)
 
@@ -712,3 +713,107 @@ fake camera, no real person):
 - Width: no horizontal scrolling at 360, 768, and 1280 px, in light and dark themes
   (screenshots in `docs/screenshots/`, synthetic face only).
 - No errors and no requests to other hosts in any of these runs.
+
+## Phase 6 extras and long-term tracking (SPEC_AMENDMENT_04)
+
+### Eye-comfort reminder (`src/blink/comfortReminder.ts`, PROJECT_SPEC 5.6)
+
+Off by default. The baseline is the user's own blink rate: pooled over the first 3 usable,
+complete minutes of the session timeline, or, with history on, over the good minutes of the last
+14 days (at least 60). The reminder is due when the last N complete minutes (3, 5, or 10, user-set)
+are all usable and not low-FPS, do not include the baseline minutes, and their pooled blink rate is
+below a user-set fraction (30, 50, or 70%) of the baseline. The cooldown is at least 20 minutes,
+measured on the wall clock. It is delivered as a banner, plus an optional silent system notification.
+Unit tests (`comfortReminder.test.ts`, 9 tests) cover the defaults, pooling, quality gating,
+the cooldown, and the history baseline. **Not checked in a browser:** a reminder actually firing
+(it needs more than 8 minutes of reduced blinking).
+
+### Flicker check with a background reference (PROJECT_SPEC 5.4 "Flicker")
+
+- Geometry (`backgroundPolygons`, `src/rppg/roi.ts`): two rectangles beside the face's landmark
+  bounding box (width W, height H), each 0.25 W outside it, 0.3 W wide, spanning 20% to 60% of H.
+  A rectangle less than half inside the frame is dropped. Every second row and column is read, and
+  the two rectangles are merged by pixel count (`mergeStats`). **Not yet checked live** in the
+  Landmark Explorer, where the "Pulse regions" preset now draws them.
+- Rule: the background trace goes through the same resampling and band-pass as a region (green,
+  relative to its mean). When its SQI at a region's peak frequency is at least `FLICKER_SQI` (=
+  `SQI_FAIR` = 0.5), the region is flagged `flicker` and lowered one quality step. The pooled
+  estimate is checked the same way.
+- Synthetic tests (`src/rppg/flicker.test.ts`):
+  - A background varying at the pulse rate flagged every region in all 10 hops, each one step
+    lower than without it.
+  - Background flicker at a different rate (120 vs 66 BPM) flagged nothing, and the value was shown.
+  - **False flags on a steady background (noise only): 3 of 1600 hops (0.19%)**. That was 40
+    streams of 50 s at 55-165 BPM. The threshold was not tuned to this result.
+- Browser (synthetic face, production build): 72 BPM at Good in all regions, with no flicker flag.
+- Cost: per-frame processing outside face tracking was 2.70, 3.25, and 3.45 ms median with the
+  background check, against 2.45, 2.65, and 2.70 ms for the build before it. These were alternating
+  runs, 30 s each, on the same machine under other load. With every second row and column only, it
+  was 2.70 to 3.15 ms against 1.70 to 2.80 ms (n = 3 runs each). All runs were under the 4 ms
+  budget, so the Web Worker of Phase 6 is not needed.
+
+### Offline HRV limits (`npm run hrv:limits`, PROJECT_SPEC 7.4)
+
+`tools/hrv_limits.ts` times beats with the app's own filtered waveform and peak detection
+(`tools/hrv.ts`). It runs on synthetic 60 s streams with a known, variable heart rate: mean 70 BPM,
+random IBI sd 20 ms, plus a 0.25 Hz modulation of +-30 ms (true RMSSD 31.9 ms median). Beats are
+compared from 2 s to 58 s. Results, n = 20 windows per row:
+
+| Condition (pulse 0.4% in green)    | Peak time    | Beats missed / extra | Beat timing sd | RMSSD estimated | Median abs. error (relative) |
+| ---------------------------------- | ------------ | -------------------- | -------------- | --------------- | ---------------------------- |
+| 30 fps, no noise                   | 30 Hz grid   | 0.0% / 0.0%          | 9.5 ms         | 38.0 ms         | 7.0 ms (21.6%)               |
+| 30 fps, no noise                   | interpolated | 0.0% / 0.0%          | 0.9 ms         | 31.9 ms         | 0.1 ms (0.4%)                |
+| 60 fps, no noise (resampled to 30) | 30 Hz grid   | 0.0% / 0.0%          | 9.5 ms         | 37.8 ms         | 6.9 ms (21.7%)               |
+| 30 fps, noise sd 0.3, jitter 3 ms  | interpolated | 0.0% / 22.8%         | 83.9 ms        | 260.0 ms        | 229.3 ms (732.8%)            |
+| 30 fps, noise sd 0.6, jitter 3 ms  | interpolated | 0.1% / 46.0%         | 119.1 ms       | 262.4 ms        | 232.6 ms (744.9%)            |
+| 30 fps, noise sd 1.0, jitter 3 ms  | interpolated | 0.2% / 53.7%         | 141.6 ms       | 242.8 ms        | 213.7 ms (718.2%)            |
+
+The 30 Hz grid alone overstates RMSSD by about a fifth, and sub-sample interpolation removes most of
+that. With even the lightest noise level, though, peak detection adds extra beats. Noise sd 0.3 is
+the level at which the app shows a pulse rate in 78% of hops (SPEC_AMENDMENT_03). Those extra beats
+make RMSSD several times too large. The pulse rate survives, because it comes from the spectrum,
+but beat-to-beat timing does not. This is why HRV is not shown. The tool can also compare a
+recorded trace with a reference RR log (`npm run hrv:limits -- frames.csv rr.csv`); no such
+recording exists yet.
+
+### Mini window (SPEC_AMENDMENT_04 F1)
+
+`src/app/useMiniWindow.ts` opens a Document Picture-in-Picture window, copies the page's styles and
+theme, and renders a compact view into it through a React portal. While it is open, the capture
+controller treats the page as visible (`src/app/miniWindowState.ts`).
+
+Browser test (2026-10-24, Chrome on Windows, raw DevTools protocol, fake camera at 20 fps):
+
+- With the window covered, the page was hidden, and video-frame callbacks stopped (0 per second).
+- With a mini window open and the main page hidden, callbacks arrived at 20 per second and timers
+  at the normal rate.
+
+In every automated run, Chrome closed the mini window after 4 to 7 s (about 13 s with focus
+emulation), including on a plain test page without React. The cause is unknown, possibly the
+automated window never having focus. The app's mini view itself rendered the live status. **Not
+verified:** a mini window staying open on a real desktop.
+
+### History (SPEC_AMENDMENT_04 F2-F4)
+
+- Each finished session-timeline minute becomes one row (`src/history/history.ts`) in IndexedDB
+  (`src/app/historyStore.ts`). The row holds the Patch B blink measures and the median of the pulse
+  values shown in that minute, with hops shown and estimated. It also holds the indicator's
+  5-minute result from the latest trend point at most 10 s before the minute's end.
+- A minute cut short by Stop is kept if it lasted at least 1 s. Rows older than 90 days are
+  deleted at load and hourly.
+- Day values pool usable, not-low-FPS minutes by valid time and need at least 10 such minutes.
+  Pulse is the median over minutes with a shown value. The indicator is shown as minutes per band.
+- Unit tests: 11 in `history.test.ts` and 8 in `Tracking.test.tsx`.
+- Browser test (production build, synthetic blinking face at 15 blinks/min):
+  - After 2.7 min, 2 rows were saved, each with 15 blinks and a rate of 15.0/min. Stop added a 32 s
+    row.
+  - The history view showed the day with blink values withheld (2 of 10 usable minutes).
+  - The CSV had 3 rows and 22 columns, and Delete all left 0 rows.
+  - No requests after load. The only CSP reports were the known MediaPipe logger.
+  - Layout with 200 seeded rows: no horizontal scrolling at 360 or 1280 px, in light or dark.
+
+### Long sessions (F5)
+
+Session-timeline minutes more than 10 minutes behind keep only their summary
+(`KEEP_DETAIL_MINUTES`); a test checks that the summary is unchanged. Other per-frame stores were
+already bounded.

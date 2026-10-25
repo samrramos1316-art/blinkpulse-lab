@@ -113,23 +113,25 @@ export function describeSeries(
   values: readonly (number | null)[],
   format: (v: number) => string,
   usable?: readonly boolean[],
+  /** What one point is (history plots use days and hours). */
+  unit: 'minute' | 'day' | 'hour' = 'minute',
 ): string {
   const n = values.length;
-  if (n === 0) return `${label}: no minutes measured yet.`;
+  if (n === 0) return `${label}: no ${unit}s measured yet.`;
   const ok = (i: number) => usable?.[i] ?? values[i] !== null;
   const unusable = values.filter((_, i) => !ok(i)).length;
   const present = values.filter((v, i): v is number => ok(i) && v !== null && Number.isFinite(v));
   const noValue = n - unusable - present.length;
-  const minutes = (k: number) => `${String(k)} minute${k === 1 ? '' : 's'}`;
+  const minutes = (k: number) => `${String(k)} ${unit}${k === 1 ? '' : 's'}`;
   const head = `${label} over ${minutes(n)}`;
-  if (unusable === n) return `${head}: no usable minutes.`;
+  if (unusable === n) return `${head}: no usable ${unit}s.`;
   const extra = noValue ? `, no value in ${minutes(noValue)} without blinks` : '';
   if (present.length === 0) return `${head}: no values${extra}, ${minutes(unusable)} unusable.`;
   const lo = Math.min(...present);
   const hi = Math.max(...present);
   const range =
     lo === hi
-      ? `${format(lo)} in every minute with a value`
+      ? `${format(lo)} in every ${unit} with a value`
       : `range ${format(lo)} to ${format(hi)}`;
   return `${head}: ${range}${extra}, ${minutes(unusable)} unusable.`;
 }

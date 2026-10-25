@@ -90,7 +90,9 @@ runs, with their sample sizes.
 
 - Webcam heart-rate variability (HRV) is not reliable: at 30 fps a frame is about 33 ms long,
   which is the same size as the beat-to-beat changes HRV measures, and noise moves the detected
-  beats further. HRV is therefore not shown in the app (PROJECT_SPEC 7.4).
+  beats further. HRV is therefore not shown in the app (PROJECT_SPEC 7.4). On synthetic
+  traces at the lightest noise level tested, peak detection added 22.8% extra beats and
+  overstated RMSSD about 8-fold (`npm run hrv:limits`, n = 20 windows; `docs/METHODS.md`).
 - The pulse colour signal is weaker for darker skin tones and in poor lighting, so the pulse rate
   may work worse for some people. How much worse is unknown until V2 reports results per
   condition and per participant.
@@ -108,3 +110,30 @@ runs, with their sample sizes.
 
 - The plots show the last 10 s window as the app computed it; they are explanations, not separate
   measurements. With live data they have so far only been seen on a synthetic face (Phase 4).
+
+## Phase 6 extras and long-term tracking (SPEC_AMENDMENT_04)
+
+- **Flicker check:**
+  - It only notices light that varies at the same rate as a region's pulse estimate, and only
+    when the background rectangles beside the face are in the frame.
+  - Moving people, a scrolling screen, or hair in those rectangles also count as "background".
+  - Its position has not been checked live, and it has been tested on synthetic data only. On a
+    steady synthetic background, 0.19% of hops were wrongly flagged.
+- **Eye-comfort reminder:**
+  - It compares your blink rate only with your own earlier rate.
+  - Reading, concentrating, and screen work all lower blinking, so a reminder says nothing about
+    your eyes' health.
+  - Its thresholds are user settings, not tested values.
+- **Mini window:**
+  - It exists only in Chrome and Edge on computers.
+  - In automated tests Chrome closed it after a few seconds, for an unknown reason. Whether it
+    stays open on a real desktop has not been checked yet.
+  - When it closes and the page is hidden, measuring pauses.
+- **History:**
+  - Day values describe the minutes that were measured. They depend on when, where, and how long
+    the app ran, so they are not comparable with other people or with clinical values.
+  - The stored pulse values have the same unvalidated accuracy as the live ones.
+  - The indicator minutes are compared with each session's own alert baseline, so different days
+    use different baselines.
+  - Closing the tab can lose the minute in progress.
+  - Clearing the browser's site data deletes the history.

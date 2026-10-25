@@ -27,7 +27,7 @@ export const PRESETS: readonly Preset[] = [
   { id: 'eyes', label: 'Both EAR eyes', indices: [...EYE_A, ...EYE_B] },
   {
     id: 'regions',
-    label: 'Pulse regions (forehead, cheeks)',
+    label: 'Pulse regions (forehead, cheeks, background)',
     indices: [...FOREHEAD.brows, ...FOREHEAD.midline, ...RIGHT_CHEEK, ...LEFT_CHEEK],
   },
   { id: 'custom', label: 'Custom list or range', indices: [] },
