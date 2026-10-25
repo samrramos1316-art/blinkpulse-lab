@@ -142,6 +142,10 @@ intervals it reports:
   (below), a hidden tab, or a timestamp-source change. Each gap is stored as a time interval;
   `spansGap(gaps, start, end)` lets later stages reject any blink event or pulse window that
   overlaps one. Hidden-tab and source-change pauses are not added to the rolling statistics.
+  Since 2026-10-24 (author's decision, note in PROJECT_SPEC 5.1), a skipped frame or a long
+  interval breaks an analysis only when the hole is longer than its own limit (100 ms for blinks
+  and the eye-closure indicator, 250 ms for pulse; `breaksAnalysis`); a hidden tab or a source
+  change always does.
   This split is option A, approved by the author on 2026-10-17 (note in PROJECT_SPEC 5.1),
   because the 1.5x rule flagged 3-6% of intervals on a complete stream (table below). The 2.5x
   factor is provisional until real webcams are measured in Phase 4.
@@ -237,7 +241,9 @@ Hysteresis state machine (open, closed, reopening). Start and end times are line
 of the close- and reopen-threshold crossings between frame timestamps. Events are classified by
 duration: blink (< 500 ms), long closure (500-2000 ms), extended closure (> 2000 ms). An event with
 only one sample below the close threshold is marked low confidence. An invalid sample (no face,
-head turned) or a frame gap over 100 ms aborts the event in progress.
+head turned), a hole over 100 ms, a hidden tab, or a timestamp-source change aborts the event in
+progress. A single skipped frame at 30 fps (a 67 ms hole) is bridged (since 2026-10-24; before, it
+aborted the event).
 
 ### Head-pose gating (deviation from PROJECT_SPEC 5.3)
 
@@ -286,8 +292,8 @@ These are tests of the detector logic on idealised signals, not of accuracy on r
 Plays a local video file and runs the same pipeline on every frame using
 `requestVideoFrameCallback` `mediaTime` as the timestamp, so detections and hand labels share the
 video's own timeline. Calibration uses the first 10 s; labels inside that window are excluded from
-scoring. Frames skipped by the player (`presentedFrames` jumps) are counted and marked as gaps; if
-any occur, analyse again at a lower speed. Labelling is frame by frame with the detections hidden.
+scoring. Frames skipped by the player (`presentedFrames` jumps) are counted and marked as gaps
+(holes up to 100 ms are bridged, as in the live app); if any occur, analyse again at a lower speed. Labelling is frame by frame with the detections hidden.
 Exports (numbers only): detections, labels, and per-frame EAR CSV. Scoring (`src/blink/v1.ts`) is
 shared by the page and `npm run score:v1`.
 
@@ -297,9 +303,10 @@ Per SPEC_AMENDMENT_01 Patch B. The session starts with the first frame after the
 calibration and is cut into one-minute bins.
 
 - **Valid time** uses the same rule as the 60 s metrics: intervals between consecutive valid samples
-  without a gap (<= 100 ms, no FrameClock gap flag), split exactly at minute boundaries.
-- **Lost time** is attributed per interval: a gap (> 100 ms or flagged: hidden tab, dropped frames)
-  counts as "gap"; otherwise the reason of the invalid sample (face not found, head turned,
+  without a gap (<= 100 ms, and no hidden-tab or source-change break), split exactly at minute
+  boundaries.
+- **Lost time** is attributed per interval: a gap (> 100 ms, or a hidden-tab or source-change
+  break) counts as "gap"; otherwise the reason of the invalid sample (face not found, head turned,
   calibrating during a recalibration).
 - **Events** belong to the minute in which they start; closed time is split across minutes.
 - **Usable** when valid time is at least 70% of the full minute (Patch B). The current minute is
@@ -474,7 +481,8 @@ what V2 measures.
 - `#v2` plays a local video file and runs, per decoded frame (`requestVideoFrameCallback`, media
   time), the same face tracking, calibration-relative gating, regions, pixel reading
   (`src/app/pulseFrame.ts`, shared with the live app), and `PulseEstimator`. The frames CSV uses
-  the video's own media time as `t_ms`. Frames skipped by the player are marked as gaps.
+  the video's own media time as `t_ms`. Frames skipped by the player are marked as gaps (holes up to
+  250 ms are bridged, as in the live app).
 - `npm run ppg:ref` (`src/rppg/reference.ts`) turns a contact PPG signal (`t_ms,ppg`) into
   `t_ms,bpm`: the same 10 s windows ending at 1 s steps, resampling to 30 Hz (hole > 250 ms = no
   reading), band-pass, Hann/FFT peak with parabolic refinement, applied to the PPG minus its mean

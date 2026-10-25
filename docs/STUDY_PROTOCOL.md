@@ -62,8 +62,9 @@ All timing is in milliseconds from frame timestamps. Definitions reuse the exist
 
 A frame interval counts as **valid time** when both of its frames are valid (face found, both eyes
 measured, head pose within |yaw| <= 25 degrees and |pitch| <= 20 degrees relative to calibration)
-and the interval is not a frame gap (dt > 2.5x median dt, frames reported dropped, hidden tab, or a
-timestamp source change; PROJECT_SPEC 5.1 as amended 2026-10-17). These are the same rules as the
+and the interval is not a frame gap: longer than 100 ms, a hidden tab, or a timestamp source change
+(PROJECT_SPEC 5.1 as amended 2026-10-17 and 2026-10-24; a single skipped frame or an interval over
+2.5x the median is bridged when the hole is 100 ms or shorter). These are the same rules as the
 blink cards and the per-minute timeline (`src/blink/sessionSummary.ts`).
 
 ### 3.2 Factors (features 1-3 of PROJECT_SPEC 5.7)

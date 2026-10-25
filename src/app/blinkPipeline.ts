@@ -7,7 +7,12 @@
  * `snapshot()` is for React at <= 4 Hz.
  */
 
-import { BlinkDetector, type BlinkEvent, type EarSample } from '../blink/blinkDetector.ts';
+import {
+  BlinkDetector,
+  DEFAULT_MAX_GAP_MS,
+  type BlinkEvent,
+  type EarSample,
+} from '../blink/blinkDetector.ts';
 import { calibrate, type BlinkThresholds, type CalibrationResult } from '../blink/calibration.ts';
 import { earBothEyes, type EyeIndices, type Point } from '../blink/ear.ts';
 import { BlinkMetrics, type BlinkMetricsSnapshot } from '../blink/metrics.ts';
@@ -18,7 +23,7 @@ import {
   type EciResult,
   type TrendPoint,
 } from '../blink/sleepiness.ts';
-import type { FrameTick } from '../capture/frameClock.ts';
+import { breaksAnalysis, type FrameTick } from '../capture/frameClock.ts';
 import { median } from '../dsp/stats.ts';
 import { poseWithinLimits, relativePose, type HeadPose } from '../vision/headPose.ts';
 
@@ -166,14 +171,17 @@ export class BlinkPipeline {
     }
     this.last = { status, ear, eyeA, eyeB, pose: face?.pose ?? null, eyeSpan };
 
-    const sample: EarSample = { tMs: tick.tMs, ear, valid, gapBefore: tick.gap };
+    // Holes up to 100 ms are bridged (PROJECT_SPEC 5.3); the frame clock also flags a
+    // single skipped frame, which must not abort a blink or count as lost time.
+    const gapBefore = breaksAnalysis(tick, DEFAULT_MAX_GAP_MS);
+    const sample: EarSample = { tMs: tick.tMs, ear, valid, gapBefore };
     this.record(tick.tMs, valid ? ear : NaN, face !== null);
 
     const calibrating = this.calibration.phase === 'running';
     if (this.thresholds !== null) {
       this.session.addSample(
         valid && !calibrating
-          ? { tMs: tick.tMs, valid: true, gapBefore: tick.gap }
+          ? { tMs: tick.tMs, valid: true, gapBefore }
           : {
               tMs: tick.tMs,
               valid: false,
@@ -182,7 +190,7 @@ export class BlinkPipeline {
                 : status === 'headTurned'
                   ? 'headTurned'
                   : 'noFace',
-              gapBefore: tick.gap,
+              gapBefore,
             },
       );
     }
@@ -197,7 +205,7 @@ export class BlinkPipeline {
         ear,
         valid,
         reason: status === 'headTurned' ? 'headTurned' : 'noFace',
-        gapBefore: tick.gap,
+        gapBefore,
       });
     }
 

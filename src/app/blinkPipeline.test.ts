@@ -230,3 +230,38 @@ describe('BlinkPipeline', () => {
     expect(portrait.snapshot().eyeSpanFraction).toBe(a);
   });
 });
+
+describe('BlinkPipeline: frame-clock breaks (PROJECT_SPEC 5.3: holes up to 100 ms are bridged)', () => {
+  /** 30 fps; frames in `skip` are never delivered; the next one carries the clock's flag. */
+  function run(skip: ReadonlySet<number>, reason: 'dropped' | 'hidden') {
+    const { p, next } = calibrated();
+    let events = 0;
+    let prev = next - 1;
+    for (let i = next; i < next + 30 * 30; i++) {
+      if (skip.has(i)) continue;
+      const gap = i - prev > 1 || (reason === 'hidden' && skip.has(i - 1));
+      const t: FrameTick = {
+        ...tick(i),
+        dtMs: ((i - prev) * 1000) / 30,
+        gap,
+        gapReason: gap ? reason : null,
+      };
+      if (p.process(t, face(earAt(i)))) events++;
+      prev = i;
+    }
+    return { events, minutes: p.snapshot().session };
+  }
+  // One frame skipped in the middle of each of the 10 blinks after calibration (blinks
+  // are frames 45-50 mod 90; calibration ends near frame 300).
+  const midBlink = new Set(Array.from({ length: 10 }, (_, k) => 47 + (k + 3) * 90));
+
+  it('a skipped frame inside a blink (67 ms hole) does not abort it', () => {
+    for (const i of midBlink) expect((i - 45) % 90).toBe(2); // really inside a blink
+    expect(run(new Set(), 'dropped').events).toBe(10);
+    expect(run(midBlink, 'dropped').events).toBe(10);
+  });
+
+  it('a hidden page still breaks the blink in progress', () => {
+    expect(run(midBlink, 'hidden').events).toBe(0);
+  });
+});

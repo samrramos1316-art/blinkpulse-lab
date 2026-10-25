@@ -597,3 +597,36 @@ from the three capped ratios with the app's floors, per-participant Spearman wit
 one-sided Wilcoxon, the band rule). Noted, not changed: in V1 scoring, a detection just after the
 calibration window cannot match a label just before it, so at most one boundary event per recording
 counts as a false positive.
+
+## Fourth bug review (2026-10-24, author's request: "look meticulously")
+
+A line-by-line pass over the DSP (resampling, spectrum, peaks), blink detection (EAR, calibration,
+detector, metrics), capture (frame clock, timestamp source, frame loop, controller), the PVT, the
+indicator's gating, and the app glue.
+
+**Bug: a skipped camera frame aborted the blink in progress and counted as lost time.** The frame
+clock flags every skipped frame as a gap (option A, PROJECT_SPEC 5.1), and the blink detector, the
+blink metrics, the per-minute timeline, and the eye-closure indicator all treated that flag as a
+break, although each already bridges holes up to 100 ms itself (PROJECT_SPEC 5.3). Browser test,
+synthetic face blinking 15 times per minute, headless Chrome dropping 164-246 frames per 30 s: the
+deployed build showed 7 and 8 blinks/min (2 runs); with the fix, 15 and 15. The indicator's coverage
+also lost every skipped-frame interval.
+
+**Process error, reported to the author:** the pulse fix of 2026-10-23 (`pulseGapBefore`) cited
+PROJECT_SPEC 5.4 (250 ms) and missed that option A, approved by the author on 2026-10-17, makes every
+skipped frame a gap for pulse windows too. It changed an approved rule without asking (CLAUDE.md:
+propose, do not silently choose). The conflict was put to the author.
+
+**Author's decision (2026-10-24): bridge short holes.** A skipped frame or an interval over 2.5x the
+median breaks an analysis only when the hole is longer than its own limit: 100 ms for blinks and
+the indicator, 250 ms for pulse; a hidden tab or a timestamp-source change always does
+(`breaksAnalysis`, `src/capture/frameClock.ts`; tested: a skipped frame inside each of 10 blinks
+keeps all 10, the old rule loses them; a hidden tab still aborts). Recorded as a dated note under
+option A in PROJECT_SPEC 5.1 (original text kept), in the draft STUDY_PROTOCOL Section 3.1 (valid
+time), and in METHODS.
+
+Checked and found correct: the resampler (gaps from raw samples, centroid timing), the spectrum
+scaling and parabolic refinement, peak finding (matches SciPy's plateau, distance, and prominence
+rules), EAR and calibration (5.3), the blink state machine, the metrics windows, the frame clock's
+gap priorities, timestamp-source choice, the controller's start/stop races, the PVT timing and
+scoring, and the indicator's gates (coverage, frame rate, blinks; a reason, never a number).

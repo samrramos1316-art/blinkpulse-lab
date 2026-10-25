@@ -181,6 +181,8 @@ It also includes a **Signal Lab view** that shows each intermediate signal (EAR 
 
 > **Gap rule changed (option A, approved by the author, 2026-10-17):** dt > 1.5x median dt is an *irregular interval*: counted and shown as a timing warning, but it does not invalidate data. Only real breaks are gaps that invalidate spanning blink events and pulse windows: dt > 2.5x median dt, frames reported dropped by `requestVideoFrameCallback` (`presentedFrames`), a hidden tab, or a timestamp-source change. Reason: on Chrome's fake camera the 1.5x rule flagged 3-6% of intervals with no frames lost (`docs/METHODS.md`), which would reject nearly every 10 s pulse window. The 2.5x factor is provisional and is to be checked on real webcams in Phase 4.
 
+> **Short holes bridged (approved by the author, 2026-10-24):** gaps from option A are still counted and shown, but a skipped frame or an interval over 2.5x the median breaks an analysis only when the hole is longer than that analysis's own limit: 100 ms for blink events, blink metrics, the per-minute timeline, and the eye-closure indicator (5.3), 250 ms for pulse windows (5.4). A hidden tab or a timestamp-source change always breaks it. Reason: on a camera that skips single frames (common on phones), option A discarded every blink and pulse window around each skipped frame (in a browser test with 57-130 dropped frames per 30 s, the pulse showed no value in 3 of 3 runs). Implemented in `breaksAnalysis` (`src/capture/frameClock.ts`).
+
 ### 5.2 Landmarks (`vision/`)
 
 - Use `FaceLandmarker` with `runningMode: 'VIDEO'`, `numFaces: 1`, `outputFacialTransformationMatrixes: true`. Call `detectForVideo(video, timestampMs)`; timestamps must be strictly increasing.

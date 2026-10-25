@@ -234,3 +234,20 @@ export class FrameClock {
 export function spansGap(gaps: readonly GapInterval[], startMs: number, endMs: number): boolean {
   return gaps.some((g) => g.startMs < endMs && g.endMs > startMs);
 }
+
+/**
+ * Whether the break before this frame breaks an analysis that bridges holes up to
+ * `maxGapMs` (blinks 100 ms, PROJECT_SPEC 5.3; pulse 250 ms, 5.4). A hidden page or
+ * a change of timestamp source always does (time base). A skipped frame or a long
+ * interval is flagged for timing statistics but breaks the analysis only when the
+ * hole is longer than `maxGapMs`.
+ */
+export function breaksAnalysis(
+  tick: Pick<FrameTick, 'gap' | 'gapReason' | 'dtMs'>,
+  maxGapMs: number,
+): boolean {
+  if (!tick.gap) return false;
+  if (tick.gapReason === 'dropped' || tick.gapReason === 'interval')
+    return !(tick.dtMs <= maxGapMs);
+  return true;
+}
