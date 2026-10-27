@@ -132,8 +132,8 @@ ordinary use rather than from watching it:
   window visible, for example side by side; a hidden window pauses measuring.
 - **History on this device:** when you turn it on, each finished minute is saved as numbers in
   this browser only. That covers blink measures, the pulse values the app showed, and the
-  eye-closure indicator. The **History** view shows days, hours of the day, and single days, each
-  value with its number of minutes. Export CSV and Delete all are one click away, and minutes are
+  eye-closure indicator. The **History** view shows this week next to last week, then days, hours
+  of the day, and single days, each value with its number of minutes. Export CSV and Delete all are one click away, and minutes are
   deleted after 90 days. No video, images, or face landmarks are ever saved, and nothing is
   uploaded.
 - **Eye-comfort reminder:** a gentle note when you have blinked much less than your usual rate for

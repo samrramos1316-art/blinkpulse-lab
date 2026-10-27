@@ -317,6 +317,62 @@ export function summarizeDays(rows: readonly HistoryRow[]): DaySummary[] {
   return [...byDay(rows)].map(([day, rs]) => summarizeDay(day, rs));
 }
 
+/** A period of whole local days, summarised like a day (SPEC_AMENDMENT_04 F6). */
+export interface PeriodSummary {
+  /** First and last local day of the period, YYYY-MM-DD. */
+  from: string;
+  to: string;
+  /** Days in the period with at least one saved minute. */
+  daysWithData: number;
+  measuredMinutes: number;
+  validMinutes: number;
+  /** Blink values need MIN_DAY_USABLE_MINUTES usable minutes, as for a day. */
+  blinks: BlinkPool;
+  pulse: PulsePool;
+  indicator: IndicatorPool;
+}
+
+/** Rows that start in [startMs, endMs), summarised. */
+export function summarizePeriod(
+  rows: readonly HistoryRow[],
+  startMs: number,
+  endMs: number,
+): PeriodSummary {
+  const rs = rows.filter((r) => r.startMs >= startMs && r.startMs < endMs);
+  return {
+    from: dayKey(startMs),
+    to: dayKey(endMs - 1),
+    daysWithData: byDay(rs).size,
+    measuredMinutes: rs.length,
+    validMinutes: rs.reduce((a, r) => a + r.validMs, 0) / 60_000,
+    blinks: poolBlinks(rs, MIN_DAY_USABLE_MINUTES),
+    pulse: poolPulse(rs),
+    indicator: poolIndicator(rs),
+  };
+}
+
+/**
+ * This week against last week (F6): the last 7 local days including today, and the
+ * 7 days before them. Rolling weeks, so no week-start convention is needed.
+ */
+export function compareWeeks(
+  rows: readonly HistoryRow[],
+  nowMs: number,
+): { thisWeek: PeriodSummary; lastWeek: PeriodSummary } {
+  const thisStart = rangeStart(nowMs, 7);
+  const lastStart = rangeStart(nowMs, 14);
+  const tomorrow = rangeStart(nowMs, 0);
+  return {
+    thisWeek: summarizePeriod(rows, thisStart, tomorrow),
+    lastWeek: summarizePeriod(rows, lastStart, thisStart),
+  };
+}
+
+/** this - last when both exist, else null. Described, never judged. */
+export function change(thisValue: number | null, lastValue: number | null): number | null {
+  return thisValue === null || lastValue === null ? null : thisValue - lastValue;
+}
+
 /** Blink rate by local hour of day (usable minutes pooled per hour; null below 10). */
 export function hourOfDay(rows: readonly HistoryRow[]): { hour: number; blinks: BlinkPool }[] {
   const hours: HistoryRow[][] = Array.from({ length: 24 }, () => []);

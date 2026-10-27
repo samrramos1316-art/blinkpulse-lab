@@ -817,3 +817,21 @@ verified:** a mini window staying open on a real desktop.
 Session-timeline minutes more than 10 minutes behind keep only their summary
 (`KEEP_DETAIL_MINUTES`); a test checks that the summary is unchanged. Other per-frame stores were
 already bounded.
+
+### This week and last week (F6)
+
+`compareWeeks` (`src/history/history.ts`) summarises the rows that start in the last 7 local days
+including today, and in the 7 days before them (`summarizePeriod`). It pools them as for a day:
+
+- blink values need at least 10 usable minutes;
+- pulse is the median over minutes with a shown value;
+- the indicator is counted as minutes per band.
+
+The change is this week minus last week, only when both have a value. Tests:
+
+- 1 unit test in `history.test.ts`: week boundaries at local midnight, rows outside both weeks
+  ignored, the 10-minute gate, and no change without both values.
+- 1 render test in `Tracking.test.tsx`.
+
+Layout (production build, 200 seeded rows over both weeks): no horizontal page scrolling at 360 and
+1280 px, in light and dark, and no page errors.

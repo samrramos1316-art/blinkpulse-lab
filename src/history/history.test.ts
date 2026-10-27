@@ -3,6 +3,8 @@ import { BIN_MS, type MinuteBin } from '../blink/sessionSummary.ts';
 import type { TrendPoint } from '../blink/sleepiness.ts';
 import {
   byDay,
+  change,
+  compareWeeks,
   hourOfDay,
   HistoryRecorder,
   historyBaseline,
@@ -239,6 +241,35 @@ describe('history: summaries', () => {
       source: 'history',
       minutes: 60,
     });
+  });
+
+  it('weeks: the last 7 local days against the 7 before them, gated like a day', () => {
+    const now = new Date(2026, 9, 30, 15, 0).getTime();
+    const rs = [
+      // This week: Oct 24 (00:00) to Oct 30.
+      ...minutes(new Date(2026, 9, 24, 0, 0), 10, { blinkCount: 12, pulseBpm: 70 }),
+      ...minutes(new Date(2026, 9, 30, 9, 0), 10, { blinkCount: 18, eci: 1, eciBand: 'near' }),
+      // Last week: Oct 17 to Oct 23 (23:59), too few usable minutes for blink values.
+      ...minutes(new Date(2026, 9, 23, 23, 50), 10, { usable: false, pulseBpm: 64 }),
+      ...minutes(new Date(2026, 9, 17, 0, 0), 9),
+      // Before both weeks, and later than now's day: ignored.
+      ...minutes(new Date(2026, 9, 16, 23, 0), 30),
+      ...minutes(new Date(2026, 9, 31, 0, 0), 30),
+    ];
+    const { thisWeek, lastWeek } = compareWeeks(rs, now);
+    expect([thisWeek.from, thisWeek.to]).toEqual(['2026-10-24', '2026-10-30']);
+    expect([lastWeek.from, lastWeek.to]).toEqual(['2026-10-17', '2026-10-23']);
+    expect(thisWeek.measuredMinutes).toBe(20);
+    expect(thisWeek.daysWithData).toBe(2);
+    expect(thisWeek.blinks.ratePerMin).toBe(15);
+    expect(thisWeek.pulse).toEqual({ minutes: 10, bpm: 70 });
+    expect(thisWeek.indicator.bands.near).toBe(10);
+    expect(lastWeek.measuredMinutes).toBe(19);
+    expect(lastWeek.blinks.minutes).toBe(9);
+    expect(lastWeek.blinks.ratePerMin).toBeNull();
+    expect(lastWeek.pulse).toEqual({ minutes: 10, bpm: 64 });
+    expect(change(thisWeek.pulse.bpm, lastWeek.pulse.bpm)).toBe(6);
+    expect(change(thisWeek.blinks.ratePerMin, lastWeek.blinks.ratePerMin)).toBeNull();
   });
 
   it('retention is 90 days; ranges start at local midnight', () => {

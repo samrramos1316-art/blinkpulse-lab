@@ -309,4 +309,11 @@ export const HISTORY_COPY = {
   deleteYes: 'Delete all',
   cancel: 'Cancel',
   deleted: 'All saved history was deleted.',
+  weekTitle: 'This week and last week',
+  weekIntro:
+    'The last 7 days including today, next to the 7 days before them. Values need at least 10 ' +
+    'usable minutes in the week.',
+  weekNote:
+    'A change describes the measured minutes only. It can come from when and how long the app ' +
+    'ran, the lighting, or the work you did, and says nothing about health.',
 } as const;

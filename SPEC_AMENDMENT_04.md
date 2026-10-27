@@ -138,6 +138,18 @@ Tracking continues while the history view is open.
 session timeline keep their summary, not their per-frame intervals or event lists. The indicator
 trend and the ring buffers are already bounded or small.
 
+**F6. This week and last week (added 2026-10-25 at the author's request).** The history view
+shows the last 7 local days including today next to the 7 days before them. These are rolling
+weeks, so no week-start convention is needed. Each week is pooled like a day:
+- blink values need at least 10 usable minutes;
+- pulse is the median of the minutes with a shown value;
+- the indicator is shown as minutes per band.
+
+Every value shows the minutes it comes from. "Change" is this week minus last week, shown only when
+both weeks have a value. It is a signed number with no colour, arrow, or wording that calls it
+better or worse. A note says that a change describes the measured minutes only and can come from
+when and how long the app ran, the lighting, or the work done.
+
 ## Not changed
 
 No cloud, no accounts, no sync. Pulse and HRV are never sleepiness signals. HRV stays out of the

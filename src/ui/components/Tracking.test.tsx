@@ -150,6 +150,26 @@ describe('history view (SPEC_AMENDMENT_04 F4)', () => {
     expect(html).not.toMatch(/<td class="tabular">15\.0<\/td>/);
     expect(html).toContain('70 (9)');
   });
+
+  it('this week and last week: values with minute counts, change only with both', () => {
+    const today = rows(12);
+    const weekAgo = rows(12, { blinkCount: 12, ratePerMin: 12, pulseBpm: null }).map((r) => ({
+      ...r,
+      id: `old:${r.id}`,
+      startMs: r.startMs - 7 * 86_400_000,
+    }));
+    const html = renderToString(
+      <HistoryView history={history({ enabled: true, rows: [...today, ...weekAgo] })} />,
+    );
+    expect(html).toContain(HISTORY_COPY.weekTitle);
+    expect(html).toContain('15.0 (12)');
+    expect(html).toContain('12.0 (12)');
+    expect(html).toContain('+3.0');
+    // Pulse: none last week, so no change is given.
+    expect(html).toContain('70 (12)');
+    expect(html).toContain('- (0)');
+    expect(html).toContain(HISTORY_COPY.weekNote);
+  });
 });
 
 describe('mini view and reminder banner', () => {

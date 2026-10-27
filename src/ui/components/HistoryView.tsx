@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import type { History } from '../../app/useHistory.ts';
 import {
   byDay,
+  change,
+  compareWeeks,
   dayKey,
   hourOfDay,
   poolPulse,
@@ -10,6 +12,7 @@ import {
   MIN_DAY_USABLE_MINUTES,
   type DaySummary,
   type HistoryRow,
+  type PeriodSummary,
 } from '../../history/history.ts';
 import { HISTORY_COPY } from '../copy.ts';
 import { useNow } from '../useNow.ts';
@@ -51,6 +54,145 @@ function dayKeys(nowMs: number, days: number): string[] {
 function sparse(labels: readonly string[], count: number): (string | null)[] {
   const step = Math.max(1, Math.ceil(labels.length / count));
   return labels.map((l, i) => (i % step === 0 ? l : null));
+}
+
+/** "+1.2" or "-0.4"; "-" without both values. Sign only, no judgement. */
+function signed(v: number | null, digits: number): string {
+  if (v === null) return '-';
+  const t = v.toFixed(digits);
+  // No "-0.0": a change that rounds to zero is shown as zero.
+  return Number(t) > 0 ? `+${t}` : Number(t) === 0 ? (0).toFixed(digits) : t;
+}
+
+/** This week against last week (SPEC_AMENDMENT_04 F6). Descriptive only. */
+function WeekCard({ rows, now }: { rows: readonly HistoryRow[]; now: number }) {
+  const { thisWeek: a, lastWeek: b } = useMemo(() => compareWeeks(rows, now), [rows, now]);
+  const pct = (p: PeriodSummary) =>
+    p.blinks.closedFraction === null ? null : p.blinks.closedFraction * 100;
+  const lines: {
+    label: string;
+    a: number | null;
+    b: number | null;
+    digits: number;
+    an: number;
+    bn: number;
+  }[] = [
+    {
+      label: `${METRIC.blinkRate} (per minute)`,
+      a: a.blinks.ratePerMin,
+      b: b.blinks.ratePerMin,
+      digits: 1,
+      an: a.blinks.minutes,
+      bn: b.blinks.minutes,
+    },
+    {
+      label: `${METRIC.eyeClosedFraction} (%)`,
+      a: pct(a),
+      b: pct(b),
+      digits: 1,
+      an: a.blinks.minutes,
+      bn: b.blinks.minutes,
+    },
+    {
+      label: 'Long closures (per hour)',
+      a: a.blinks.longPerHour,
+      b: b.blinks.longPerHour,
+      digits: 1,
+      an: a.blinks.minutes,
+      bn: b.blinks.minutes,
+    },
+    {
+      label: 'Median blink duration (ms)',
+      a: a.blinks.medianDurationMs,
+      b: b.blinks.medianDurationMs,
+      digits: 0,
+      an: a.blinks.minutes,
+      bn: b.blinks.minutes,
+    },
+    {
+      label: `${METRIC.pulseRate} (BPM)`,
+      a: a.pulse.bpm,
+      b: b.pulse.bpm,
+      digits: 0,
+      an: a.pulse.minutes,
+      bn: b.pulse.minutes,
+    },
+  ];
+  const cell = (v: number | null, digits: number, n: number) =>
+    `${v === null ? '-' : v.toFixed(digits)} (${String(n)})`;
+  const weeks = [
+    ['This week', a],
+    ['Last week', b],
+  ] as const;
+  return (
+    <div className="history__week">
+      <h3 className="subsection-title">{HISTORY_COPY.weekTitle}</h3>
+      <p className="tool__note">
+        {`This week: ${shortDay(a.from)} to ${shortDay(a.to)}. Last week: ${shortDay(b.from)} to ${shortDay(b.to)}. `}
+        {HISTORY_COPY.weekIntro}
+      </p>
+      <div className="session__scroll">
+        <table className="tool__table">
+          <thead>
+            <tr>
+              <th scope="col">Measure</th>
+              <th scope="col">This week</th>
+              <th scope="col">Last week</th>
+              <th scope="col">Change</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">Time measured (days)</th>
+              <td className="tabular">{`${hoursMinutes(a.measuredMinutes)} (${String(a.daysWithData)})`}</td>
+              <td className="tabular">{`${hoursMinutes(b.measuredMinutes)} (${String(b.daysWithData)})`}</td>
+              <td className="tabular">-</td>
+            </tr>
+            {lines.map((l) => (
+              <tr key={l.label}>
+                <th scope="row">{l.label}</th>
+                <td className="tabular">{cell(l.a, l.digits, l.an)}</td>
+                <td className="tabular">{cell(l.b, l.digits, l.bn)}</td>
+                <td className="tabular">{signed(change(l.a, l.b), l.digits)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="plot__legend">
+        {`In brackets: the minutes each value comes from (days for time measured). "-" means not enough data. `}
+        {HISTORY_COPY.weekNote} {HISTORY_COPY.pulseNote}
+      </p>
+      <p className="tool__note">
+        {INDICATOR.title}: {HISTORY_COPY.indicatorNote}
+      </p>
+      <div className="session__scroll">
+        <table className="tool__table">
+          <thead>
+            <tr>
+              <th scope="col">Week</th>
+              <th scope="col">{INDICATOR.bands.near}</th>
+              <th scope="col">{INDICATOR.bands.somewhatAbove}</th>
+              <th scope="col">{INDICATOR.bands.wellAbove}</th>
+              <th scope="col">{INDICATOR.notEnoughData}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {weeks.map(([name, w]) => (
+              <tr key={name}>
+                <th scope="row">{name}</th>
+                <td className="tabular">{w.indicator.bands.near}</td>
+                <td className="tabular">{w.indicator.bands.somewhatAbove}</td>
+                <td className="tabular">{w.indicator.bands.wellAbove}</td>
+                <td className="tabular">{w.indicator.notEnoughData}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="plot__legend">Minutes per week.</p>
+    </div>
+  );
 }
 
 function DayDetail({ day, rows }: { day: string; rows: readonly HistoryRow[] }) {
@@ -192,6 +334,8 @@ export function HistoryView({ history }: { history: History }) {
           <dd className="stat__value tabular">{pulseAll.minutes}</dd>
         </div>
       </dl>
+
+      <WeekCard rows={rows} now={now} />
 
       <div className="plot-grid plot-grid--2">
         <SeriesPlot

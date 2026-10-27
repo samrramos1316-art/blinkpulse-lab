@@ -709,3 +709,22 @@ plus an optional notification; history shows blink, pulse at Fair or better, and
 - History over real days, the 90-day deletion with real dates (tested only as a unit), and an
   all-day session's memory use in a browser.
 - Losing the minute in progress when the tab is closed (expected, not tested).
+
+## Phase 7 addition: this week and last week (2026-10-25, author's request)
+
+`SPEC_AMENDMENT_04` F6. A card at the top of the history view.
+
+**Verified**
+
+- `npm run check`: 59 test files, 597 tests pass, including 1 new unit test and 1 new render test.
+- Production build with seeded rows in both weeks: no horizontal page scrolling at 360 and 1280 px,
+  in light and dark, and no page errors. Screenshots checked at 360 px dark and 1280 px light.
+
+**Not verified**
+
+- Real data over two weeks (none recorded yet).
+
+**Deviations**
+
+- None. The week uses the day's 10-minute gate rather than a separate one, so a week with only
+  10 usable minutes shows values. Each value carries its minute count so that this is visible.
