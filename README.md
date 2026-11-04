@@ -94,7 +94,9 @@ npm run build      # typecheck + production build into dist/ (CSP meta tag injec
 npm run preview    # serve dist/ to test the production build with its CSP
 npm run check      # typecheck + lint + format check + tests
 npm run score:v1 -- labels.csv detections.csv   # score validation V1 from exported CSVs
-npm run eval -- frames.csv reference.csv       # offline pulse evaluation (V2)
+npm run eval -- frames.csv reference.csv       # offline pulse evaluation (V2); --plot out.svg adds a Bland-Altman plot
+npm run ref:clock -- clock.csv 2026-11-03 reference.csv   # reference log from clock times (V2b)
+npm run smoke                                  # browser smoke test on the production build (needs Chrome)
 npm run ppg:ref -- ppg.csv reference.csv       # reference BPM from a ground-truth PPG (V2a)
 npm run bench:pulse                            # pulse at lower signal quality (synthetic)
 npm run hrv:limits                             # why HRV is not shown (synthetic, PROJECT_SPEC 7.4)

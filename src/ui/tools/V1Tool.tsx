@@ -4,6 +4,7 @@ import type { BlinkEvent } from '../../blink/blinkDetector.ts';
 import type { TimedEvent } from '../../blink/eventMatching.ts';
 import {
   detectionsToCsv,
+  eventsDetectedText,
   formatV1Score,
   frameIndexAt,
   framesToCsv,
@@ -490,7 +491,7 @@ export function V1Tool() {
               </div>
               <div className="timing__row">
                 <dt>Events detected</dt>
-                <dd className="tabular">{summary.events.toFixed(0)} (hidden until you score)</dd>
+                <dd className="tabular">{eventsDetectedText(summary.events, score !== null)}</dd>
               </div>
             </dl>
           ) : null}

@@ -107,5 +107,6 @@ describe('flicker check against the background reference (Phase 6)', () => {
     // Measured: 3 of 1600 hops (0.19%), recorded in docs/METHODS.md. The threshold
     // (FLICKER_SQI = SQI_FAIR) was not tuned to this result.
     expect(falseFlags).toBe(3);
-  });
+    // Simulates 2000 s of frames: close to the 5 s default limit on a busy machine.
+  }, 30_000);
 });

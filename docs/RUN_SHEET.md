@@ -86,9 +86,9 @@ of you. Use the Windows Camera app or similar, then save to `recordings/v1/`.
 3. If "Frames skipped by the player" is above 0, Analyse again at 0.25x.
 4. Note the frames, the median fps, and the skipped frames for the run log.
 5. Export the detections and frames CSV.
-6. **Label with the results out of sight.** The tool has to analyse first, because that gives it the
-   exact frame times, so the summary is on screen while you label. Don't read "Events detected";
-   scroll it out of view or cover it. Decide each blink from the video alone.
+6. **Label without looking at the results.** Don't open the exported detections until you've
+   finished. The tool keeps the "Events detected" count hidden until you score. Decide each blink
+   from the video alone.
 7. Step through the whole video, including the first 10 s (the scorer excludes those itself and
    reports how many). Shortcuts, with the labelling box focused: Left and Right step one frame,
    Shift steps one second, S marks a start, E marks an end.
@@ -154,26 +154,21 @@ time,bpm
 16:05:20,74
 ```
 
-**Convert it** to the format the tool reads. Set the date and the two file names:
+**Convert it** to the format the evaluation reads, giving the date of the recording. It warns about
+any gap over 15 s, and stops at the first line it can't read:
 
 ```powershell
-$date = '2026-11-03'
-$rows = Import-Csv recordings/v2b/good-light-clock.csv | ForEach-Object {
-  '{0},{1}' -f ([DateTimeOffset](Get-Date "$date $($_.time)")).ToUnixTimeMilliseconds(), $_.bpm
-}
-@('wall_time_ms,bpm') + $rows | Set-Content recordings/v2b/good-light-reference.csv -Encoding ascii
+npm run ref:clock -- recordings/v2b/good-light-clock.csv 2026-11-03 recordings/v2b/good-light-reference.csv
 ```
 
-Don't use `Export-Csv` here. It adds quotes that the tool can't read.
-
-**Evaluate:**
+**Evaluate, and draw the Bland-Altman plot:**
 
 ```powershell
-npm run eval -- recordings/v2b/good-light-frames.csv recordings/v2b/good-light-reference.csv
+npm run eval -- recordings/v2b/good-light-frames.csv recordings/v2b/good-light-reference.csv --plot recordings/v2b/good-light-bland-altman.svg
 ```
 
 This prints the fused result, the fused result before Patch D, and each region alone. Keep all of
-them. Check that the shown and paired counts look sensible: if almost nothing is paired, the clock
+them. The plot shows the fused result as the app runs it. Check that the shown and paired counts look sensible: if almost nothing is paired, the clock
 or date is probably wrong, which is a mistake to fix and log, not a result.
 
 The goal, which isn't guaranteed, is MAE <= 5 BPM and >= 80% within +-5 BPM for seated, still,
@@ -184,8 +179,9 @@ well-lit recordings.
 - How often the app showed a value is part of the result. Accuracy based on only a few shown values
   has to say so.
 - The reference device is not perfect and averages over time, so name the model.
-- `npm run eval` prints the Bland-Altman bias and limits, but the plot required by PROJECT_SPEC 7.3
-  still has to be made.
+- Values one second apart share most of their window, so they are not independent. A Bland-Altman
+  n counts values, not independent measurements, so give the minutes recorded and the number of
+  participants next to it.
 - One person's results say nothing about other faces, skin tones, or cameras. Say so.
 
 ## V2a (later)

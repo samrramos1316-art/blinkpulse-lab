@@ -22,6 +22,9 @@ export interface EvalResult {
   paired: number;
   /** Agreement of the values shown to the user (smoothed, Fair or better). */
   shownAgreement: Agreement;
+  /** The paired values behind shownAgreement, for the Bland-Altman plot. */
+  estimates: number[];
+  references: number[];
 }
 
 /** Keep only one region's statistics (the others become unavailable). */
@@ -68,6 +71,8 @@ export function evaluateTrace(
     shown,
     paired: e.length,
     shownAgreement: agreement(e, r),
+    estimates: e,
+    references: r,
   };
 }
 

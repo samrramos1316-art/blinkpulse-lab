@@ -187,6 +187,14 @@ export function scoreV1(
 
 const pct = (v: number) => (Number.isFinite(v) ? v.toFixed(3) : 'n/a');
 
+/**
+ * The summary's detected-event line. The count stays hidden until scoring, because
+ * knowing it while labelling would bias the hand labels (PROJECT_SPEC 7.2).
+ */
+export function eventsDetectedText(events: number, scored: boolean): string {
+  return scored ? events.toFixed(0) : 'hidden until you score';
+}
+
 /** Plain-text report, the same in the browser and the CLI. */
 export function formatV1Score(s: V1Score): string {
   return [

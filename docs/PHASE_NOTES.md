@@ -728,3 +728,55 @@ plus an optional notification; history shows blink, pulse at Fair or better, and
 
 - None. The week uses the day's 10-minute gate rather than a separate one, so a week with only
   10 usable minutes shows values. Each value carries its minute count so that this is visible.
+
+## Validation tooling (2026-11-03, author's request)
+
+The author asked for the remaining work that needs no person first. No detector, estimator, or
+threshold changed, and no validation has been run.
+
+**Built**
+
+- **V1 blinding bug fixed.** The V1 tool said "(hidden until you score)" beside the event count it
+  was showing, which could bias hand labels. The count now stays hidden until scoring
+  (`eventsDetectedText`, unit-tested).
+- **Bland-Altman plot:** `npm run eval -- frames.csv reference.csv --plot out.svg`
+  (`tools/bland_altman.ts`, hand-written SVG, 8 unit tests). It uses the same `agreement` statistics
+  the tool prints.
+- **Reference log conversion:** `npm run ref:clock` (`tools/clock_log.ts`, 12 unit tests). It turns
+  `time,bpm` clock readings into `wall_time_ms,bpm`, handles midnight, and warns about gaps longer
+  than the 15 s `referenceAt` allows.
+- **Smoke test:** `npm run smoke` (`tools/smoke.ts`, PROJECT_SPEC 6.4, Playwright with the installed
+  Chrome). Earlier browser checks used scripts kept outside the repository. It is not part of
+  `npm run check`, because it needs a browser and takes over a minute.
+- **Flaky test fixed.** `flicker.test.ts` simulates 2000 s of frames and hit Vitest's 5 s limit on a
+  busy machine (found in 3 of 12 runs in a row, and in all 3 parallel runs). It now has a 30 s limit;
+  its assertions did not change.
+
+**Verified**
+
+- `npm run check`: 61 test files, 618 tests pass, also in 3 runs at once on a busy machine.
+- `npm run smoke`, production build, Chrome's fake camera, 70 s network watch: passed. 20 fps and
+  face tracking running; no request left for another site; no requests to its own site after
+  loading; Stop ended the camera track; `#explorer`, `#v1`, `#v2`, and `#study` rendered; no uncaught
+  page errors. Console errors showed the CSP blocking the MediaPipe logger.
+- Negative control: a temporary copy of the test that fetched a file after loading failed the
+  "no requests after loading" check, so that check can fail.
+- End to end on one synthetic 120 s trace: clock log, `ref:clock`, `eval --plot`; the plot was
+  rendered in Chrome and read by eye. This tests the tools, not accuracy.
+
+**Not verified**
+
+- Any of this on real recordings or a real reference device.
+- The smoke test's fake camera shows no face, so it does not exercise blink or pulse measurement.
+- The V1 tool's hidden count in a browser (the text function is unit-tested; the page was only
+  rendered, with no video analysed).
+- Playwright does not report a request the CSP blocks, so the smoke test's "no request left" check
+  cannot see the logger's attempt. The evidence that the CSP stopped it is the console message.
+
+**Deviations**
+
+- PROJECT_SPEC 6.4 asks for a "fake camera video"; this uses Chrome's generated pattern, because the
+  synthetic face video is a test asset outside the repository.
+- `playwright` 1.64.1 added as a dev dependency (optional in PROJECT_SPEC 4). `npm audit` reports 0
+  for production dependencies and 13 moderate for dev dependencies, from `minimatch` through ESLint,
+  not Playwright.

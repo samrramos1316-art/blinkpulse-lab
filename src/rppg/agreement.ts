@@ -65,6 +65,9 @@ export function agreement(estimates: readonly number[], references: readonly num
   };
 }
 
+/** Readings further apart than this are not interpolated, so nothing is compared there. */
+export const MAX_REFERENCE_SPAN_MS = 15_000;
+
 /**
  * Reference value at time t from a reference log (sorted by time): linear
  * interpolation between readings no more than `maxSpanMs` apart; null otherwise.
@@ -72,7 +75,7 @@ export function agreement(estimates: readonly number[], references: readonly num
 export function referenceAt(
   ref: readonly { tMs: number; bpm: number }[],
   tMs: number,
-  maxSpanMs = 15_000,
+  maxSpanMs = MAX_REFERENCE_SPAN_MS,
 ): number | null {
   for (let i = 1; i < ref.length; i++) {
     const a = ref[i - 1] as { tMs: number; bpm: number };

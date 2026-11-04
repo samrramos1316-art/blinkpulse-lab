@@ -47,10 +47,12 @@ PURE); do not redistribute. Per video:
 
 **V2b (live, reference device):** seated, still, 3-5 minutes per condition (good front light, dim
 light, screen light only, slow natural head movement). In the app: Pulse tab, "Record numeric
-trace...", then save. Log the reference device every 10 s as `wall_time_ms,bpm` (milliseconds since
-1970, e.g. read from a video of the device next to a clock). Run `npm run eval` on the frames CSV
-with that log. Report per condition and per participant, including failures, with a Bland-Altman
-plot.
+trace...", then save. Log the reference device every 10 s as `time,bpm` (clock times read from a
+video of the device next to this computer's clock) and convert the log with
+`npm run ref:clock -- clock.csv 2026-11-03 reference.csv`. Run
+`npm run eval -- frames.csv reference.csv --plot out.svg` on the frames CSV with that file. Report
+per condition and per participant, including failures, with the Bland-Altman plot. Step-by-step:
+`docs/RUN_SHEET.md`.
 
 Results: none yet.
 

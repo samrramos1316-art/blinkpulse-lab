@@ -4,6 +4,9 @@
  * a reference log.
  *
  *   npm run eval -- frames.csv reference.csv [--mode fused|forehead|leftCheek|rightCheek|all]
+ *     [--plot out.svg]
+ *
+ * --plot writes a Bland-Altman plot of the fused result, as the app runs it.
  *
  * The fused mode is reported twice: as the app runs it, and as it ran before
  * SPEC_AMENDMENT_03 Patch D (no pooled fallback, first estimate shown at once).
@@ -14,22 +17,35 @@
  *   trace's "# wall_offset_ms=" line converts it).
  */
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { basename } from 'node:path';
 import { BEFORE_PATCH_D, evaluateTrace, formatEval } from '../src/rppg/evaluate.ts';
 import { REGION_IDS } from '../src/rppg/roi.ts';
 import { parseFramesCsv, parseReferenceCsv } from '../src/rppg/traceCsv.ts';
+import { blandAltmanSvg } from './bland_altman.ts';
 
 const args = process.argv.slice(2);
 const modeIdx = args.indexOf('--mode');
 const modeArg = modeIdx >= 0 ? args[modeIdx + 1] : 'all';
-const files = modeIdx >= 0 ? args.filter((_, i) => i !== modeIdx && i !== modeIdx + 1) : args;
+const plotIdx = args.indexOf('--plot');
+const plotPath = plotIdx >= 0 ? args[plotIdx + 1] : undefined;
+const files = args.filter(
+  (_, i) =>
+    !(modeIdx >= 0 && (i === modeIdx || i === modeIdx + 1)) &&
+    !(plotIdx >= 0 && (i === plotIdx || i === plotIdx + 1)),
+);
 const [framesPath, refPath] = files;
 const modes = ['fused', ...REGION_IDS] as const;
 type Mode = (typeof modes)[number];
 
-if (!framesPath || !refPath || !(modeArg === 'all' || modes.includes(modeArg as Mode))) {
+if (
+  !framesPath ||
+  !refPath ||
+  !(modeArg === 'all' || modes.includes(modeArg as Mode)) ||
+  (plotIdx >= 0 && !plotPath)
+) {
   console.error(
-    'Usage: npm run eval -- frames.csv reference.csv [--mode fused|forehead|leftCheek|rightCheek|all]',
+    'Usage: npm run eval -- frames.csv reference.csv [--mode fused|forehead|leftCheek|rightCheek|all] [--plot out.svg]',
   );
   process.exit(2);
 }
@@ -61,4 +77,12 @@ for (const mode of run) {
     console.log('');
     console.log(formatEval(evaluateTrace(frames, readings, mode, undefined, before)));
   }
+}
+
+if (plotPath) {
+  const fused = evaluateTrace(frames, readings, 'fused');
+  const title = `Bland-Altman: ${basename(framesPath)} (fused)`;
+  writeFileSync(plotPath, blandAltmanSvg(fused.estimates, fused.references, title));
+  console.log('');
+  console.log(`Plot: ${plotPath} (n = ${String(fused.paired)})`);
 }

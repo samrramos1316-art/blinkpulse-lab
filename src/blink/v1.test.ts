@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   detectionsToCsv,
+  eventsDetectedText,
   formatV1Score,
   frameIndexAt,
   framesToCsv,
@@ -107,5 +108,13 @@ describe('frame lookup for labelling', () => {
     expect(seekTimeForFrame(times, 3)).toBeCloseTo(116.65, 9);
     expect(seekTimeForFrame(times, -5)).toBeCloseTo(16.65, 9);
     expect(frameIndexAt(times, seekTimeForFrame(times, 2))).toBe(2);
+  });
+});
+
+describe('eventsDetectedText', () => {
+  it('hides the count until scoring, so it cannot bias the labels', () => {
+    expect(eventsDetectedText(42, false)).toBe('hidden until you score');
+    expect(eventsDetectedText(42, false)).not.toContain('42');
+    expect(eventsDetectedText(42, true)).toBe('42');
   });
 });
