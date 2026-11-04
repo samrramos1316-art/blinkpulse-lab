@@ -339,8 +339,8 @@ when the study ends.
 
 **KSS note (D2):** sources do not agree on the wording. A published reproduction of the scale with
 permission (Shahid et al., eds., _STOP, THAT and One Hundred Other Sleep Scales_, Springer 2012,
-ch. 47) labels every step and words step 8 as "Sleepy, but some effort to keep awake", slightly
-different from PROJECT_SPEC 5.8. The same chapter describes the rating as covering the last 10
+ch. 47) labels every step, and its step 8 is worded slightly differently from the version
+previously listed in PROJECT_SPEC 5.8. The same chapter describes the rating as covering the last 10
 minutes, while other study protocols use the last 5 minutes. That chapter names the author as the
 contact for copies and permission. This protocol therefore does not reproduce the anchor text.
 Once permission and the authorised wording are in hand, the exact wording and the time frame

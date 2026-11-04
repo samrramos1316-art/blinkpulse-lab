@@ -327,7 +327,7 @@ Clean, modern, single page. Light/dark theme following the system setting.
 
 Purpose: collect the reference data needed to test the indicator.
 
-**Karolinska Sleepiness Scale (KSS):** a one-tap, non-blocking prompt every 5 minutes (configurable). Scale anchors: 1 extremely alert, 2 very alert, 3 alert, 4 rather alert, 5 neither alert nor sleepy, 6 some signs of sleepiness, 7 sleepy but no effort to keep awake, 8 sleepy, some effort to keep awake, 9 very sleepy, great effort to keep awake, fighting sleep. **Verify wording against Akerstedt & Gillberg (1990) before publishing.**
+**Karolinska Sleepiness Scale (KSS):** a one-tap, non-blocking prompt every 5 minutes (configurable). A 1-9 scale, from most alert to sleepiest. The anchor wording is copyrighted and is not reproduced here (`docs/STUDY_PROTOCOL.md`, decision D2). **Use only the authorised wording, after written permission (Akerstedt & Gillberg, 1990).**
 
 **Brief Psychomotor Vigilance Task (PVT-B, about 3 minutes):**
 - Blank field; after a random inter-stimulus interval (uniform 1-4 s), a millisecond counter starts; the user presses Space/click/tap; reaction time is recorded and shown briefly.
