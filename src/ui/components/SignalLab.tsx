@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { PulseUpdate } from '../../rppg/pulseEstimator.ts';
 import { REGION_IDS, type RegionId } from '../../rppg/roi.ts';
-import { LAB_STEPS, REGION_LABEL } from '../copy.ts';
+import { BREAK_IT_COPY, LAB_STEPS, REGION_LABEL } from '../copy.ts';
 import {
   describeFilter,
   describeRgb,
@@ -40,7 +40,8 @@ export function SignalLab({ pulse }: { pulse: PulseUpdate | null }) {
       </h2>
       <p className="session__intro">
         How the pulse rate is worked out, step by step, from the last 10 seconds of one skin region.
-        The plots update once per second while the camera runs.
+        The plots update once per second while the camera runs.{' '}
+        <a href="#break">{BREAK_IT_COPY.linkFromLab}</a>
       </p>
 
       <fieldset className="pulse__regions">

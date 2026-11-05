@@ -24,6 +24,7 @@
     "score:v1": "node tools/score_v1.ts",
     "eval": "node tools/eval_cli.ts",
     "bench:pulse": "node tools/bench_pulse.ts",
+    "bench:break": "node tools/bench_break.ts",
     "ppg:ref": "node tools/ppg_to_ref.ts",
     "ref:clock": "node tools/clock_to_ref.ts",
     "hrv:limits": "node tools/hrv_limits.ts",

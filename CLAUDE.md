@@ -8,6 +8,8 @@
 
 > **AMENDED:** `SPEC_AMENDMENT_04.md` details Phase 6 (eye-comfort reminder, flicker check, HRV limits) and adds Phase 7, long-term tracking: an opt-in history on this device, a mini window, and a history view. It never overrides a product, privacy, wording, or accessibility rule.
 
+> **AMENDED:** `SPEC_AMENDMENT_05.md` adds the Break-it Lab (a camera-free simulation through the real pulse code) and the Privacy check (the browser's own request records). It never overrides a product, privacy, wording, or accessibility rule.
+
 Read `PROJECT_SPEC.md` first. It is the source of truth. These rules apply to every session.
 
 ## Workflow

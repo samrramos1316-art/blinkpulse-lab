@@ -25,6 +25,7 @@ import { TRACKING_COPY } from './copy.ts';
 import { useNow } from './useNow.ts';
 import { SignalLab } from './components/SignalLab.tsx';
 import { AboutDialog } from './components/AboutDialog.tsx';
+import { PrivacyCheckDialog } from './components/PrivacyCheckDialog.tsx';
 import { Footer } from './components/Footer.tsx';
 import { Header } from './components/Header.tsx';
 import { MetricCard } from './components/MetricCard.tsx';
@@ -53,6 +54,7 @@ export function App({ initialSetupOpen, initialLab = false }: AppProps) {
     setView((cur) => (cur === v ? 'signals' : v));
   };
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [privacyCheckOpen, setPrivacyCheckOpen] = useState(false);
 
   const live = capture.snapshot.status === 'running';
   useWakeLock(live);
@@ -98,6 +100,9 @@ export function App({ initialSetupOpen, initialLab = false }: AppProps) {
         onOpenAbout={() => {
           setAboutOpen(true);
         }}
+        onOpenPrivacyCheck={() => {
+          setPrivacyCheckOpen(true);
+        }}
         lab={{
           open: view === 'lab',
           onToggle: () => {
@@ -115,6 +120,12 @@ export function App({ initialSetupOpen, initialLab = false }: AppProps) {
         open={aboutOpen}
         onClose={() => {
           setAboutOpen(false);
+        }}
+      />
+      <PrivacyCheckDialog
+        open={privacyCheckOpen}
+        onClose={() => {
+          setPrivacyCheckOpen(false);
         }}
       />
       <main id="main" className="app-main" tabIndex={-1}>

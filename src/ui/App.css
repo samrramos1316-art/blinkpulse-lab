@@ -1755,3 +1755,61 @@
   align-items: flex-start;
   gap: var(--space-2);
 }
+
+/* Privacy check (SPEC_AMENDMENT_05 Patch H) */
+.privacy-badge--button {
+  border: 1px solid transparent;
+  font-family: inherit;
+  cursor: pointer;
+}
+.privacy-badge--button:hover {
+  border-color: var(--color-accent);
+}
+.privacy-badge__check {
+  text-decoration: underline;
+}
+.privacy-check__alert {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-quality-poor);
+  border-radius: var(--radius-sm);
+}
+.privacy-check__scroll {
+  overflow-x: auto;
+}
+.privacy-check__url {
+  overflow-wrap: anywhere;
+}
+
+/* Break-it Lab (SPEC_AMENDMENT_05 Patch G) */
+.breakit__presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.breakit__slider input {
+  width: 100%;
+  accent-color: var(--color-accent);
+}
+.breakit__slider-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.breakit__line {
+  margin: 0 0 var(--space-1);
+}
+
+.privacy-check > * + * {
+  margin-top: var(--space-3);
+}
+.privacy-check .privacy-check__list {
+  grid-template-columns: minmax(0, 1fr);
+}
+.privacy-check__list code {
+  white-space: nowrap;
+}

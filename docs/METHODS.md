@@ -835,3 +835,65 @@ The change is this week minus last week, only when both have a value. Tests:
 
 Layout (production build, 200 seeded rows over both weeks): no horizontal page scrolling at 360 and
 1280 px, in light and dark, and no page errors.
+
+## Break-it Lab and Privacy check (SPEC_AMENDMENT_05)
+
+### Break-it Lab (`#break`, `src/rppg/simulate.ts`)
+
+Simulated frames for three skin regions and a background go through the app's own `PulseEstimator`
+for 60 s. Each channel is its mean, times the scene brightness (light level, flicker), the head's
+shading, and the pulse, plus independent noise per channel, clipped to 0-255. Reasons and warnings
+come from the same text as the Pulse tab. The scene is illustrative: its values are not measured
+from faces. Flicker is equal in all colour channels, so POS cancels it, and the head's shading change
+is small, so **both are much easier here than real ones are likely to be**.
+
+`npm run bench:break`, 50 seeds per preset, 50 seconds of values per seed. "Wrong" means more than
+5 BPM from the truth or, with no pulse in the signal, any value shown:
+
+| Preset                            | Seconds | Shown | Wrong | Worst error (BPM) |
+| --------------------------------- | ------- | ----- | ----- | ----------------- |
+| Good conditions                   | 2500    | 2450  | 0     | 1.2               |
+| No pulse at all                   | 2500    | 6     | 6     | -                 |
+| Weak signal                       | 2500    | 8     | 6     | 44.8              |
+| Dim room                          | 2500    | 0     | 0     | -                 |
+| Too bright                        | 2500    | 0     | 0     | -                 |
+| Lamp flickering at the pulse rate | 2500    | 2414  | 0     | 1.2               |
+| Head moving                       | 2500    | 2397  | 0     | 1.2               |
+| Slow camera                       | 2500    | 0     | 0     | -                 |
+| Face lost for 3 s                 | 2500    | 1800  | 0     | 1.3               |
+
+Two results to read with care:
+
+- **Weak signal: values are rare, but most of them are wrong** (6 of 8). The sample is small.
+- **No pulse: 6 of 2500 seconds showed a value** (0.24%). The Patch D benchmark reported 0% with no
+  pulse, on a different simulated signal (n = 1985 hops), so that 0% does not hold for every signal.
+
+With no pulse and flicker at 72 per minute, at 1% and at 5%, the result is the same 6 of 2500 as with
+no flicker, which shows that POS removes this simulated flicker completely.
+
+### Finding: the cross-check is sensitive to noise, most of all at low rates
+
+The Break-it Lab showed the "two estimation methods disagree" warning in good conditions.
+`npm run bench:break`, 10 seeds per row, pulse 0.8%; errors per region and second:
+
+| True BPM | Noise | Region-seconds | Cross-check fired | Spectral error median, p95 | Beat-spacing error median, p95 | Shown | Shown at Good |
+| -------- | ----- | -------------- | ----------------- | -------------------------- | ------------------------------ | ----- | ------------- |
+| 72       | 0.0   | 1500           | 0%                | 0.0, 0.0                   | 0.0, 0.0                       | 490   | 490           |
+| 72       | 0.2   | 1500           | 0%                | 0.2, 0.5                   | 0.0, 3.0                       | 490   | 490           |
+| 72       | 0.5   | 1500           | 43%               | 0.4, 1.2                   | 6.3, 28.0                      | 490   | 351           |
+| 50       | 0.5   | 1500           | 99%               | 0.4, 1.1                   | 44.7, 78.6                     | 468   | 4             |
+| 110      | 0.5   | 1500           | 5%                | 0.4, 1.3                   | 2.5, 7.1                       | 490   | 343           |
+| 150      | 0.5   | 1500           | 7%                | 0.4, 1.2                   | 0.0, 11.5                      | 490   | 101           |
+
+The spectral estimate stays close to the truth; the beat-spacing estimate does not. Its peak finding
+picks up noise peaks, and a slow pulse leaves more room between beats for them. So a correct value is
+lowered one quality step, and a Fair value is lowered to Poor and withheld. In this simulation that
+costs slow pulses most. **Not changed:** the fix changes the pipeline, so it is the author's decision,
+and it should be made before V2 freezes the parameters. Not checked on real faces.
+
+### Privacy check (privacy badge, `src/app/networkLog.ts`, `src/ui/networkSummary.ts`)
+
+The dialog reads the browser's Resource Timing records and `securitypolicyviolation` events, held in
+memory. Addresses are compared by whole origin. `blob:` and `data:` addresses are left out, because
+they stay on the device. `npm run smoke` checks that the dialog agrees with what Playwright saw, and
+the dialog also sees the refused logger request, which Playwright does not report.

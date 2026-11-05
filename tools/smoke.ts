@@ -153,6 +153,21 @@ try {
     );
   }
 
+  // The in-page Privacy check must agree with what Playwright saw, and it can also see
+  // the logger's refused attempt, which Playwright can't.
+  await page.getByRole('button', { name: /Check$/ }).click();
+  const dialog = page.getByRole('dialog', { name: 'Check the privacy claim' });
+  await dialog.waitFor();
+  const otherSites = await timingNumber(page, 'Requests to other sites');
+  check(otherSites === sent.length, 'Privacy check agrees on other sites', String(otherSites));
+  const refused = await timingNumber(page, 'Requests refused by the browser');
+  if (watchSeconds >= 65) {
+    check(refused >= 1, 'Privacy check shows the refused logger request', String(refused));
+  }
+  const rule = await timingValue(page, 'Connection rule of this page');
+  check(rule === "connect-src 'self'", 'Privacy check reads the connection rule', rule);
+  await dialog.getByRole('button', { name: 'Close' }).click();
+
   const opened = await page.evaluate<number>(STREAMS_OPENED);
   const liveBefore = await page.evaluate<number>(LIVE_TRACKS);
   check(opened > 0 && liveBefore > 0, 'Camera is on while running', `${String(liveBefore)} track`);
@@ -167,6 +182,16 @@ try {
     await heading.waitFor();
     check(true, `${route} renders`, (await heading.textContent()) ?? '');
   }
+
+  // Break-it Lab: runs with no camera, and responds to its controls.
+  const streamsBefore = await page.evaluate<number>(STREAMS_OPENED);
+  await page.goto(`${baseUrl}#break`);
+  await page.getByText(/^A value was shown for \d+ of 50 seconds/).waitFor();
+  await page.getByRole('button', { name: 'No pulse at all' }).click();
+  await page.getByText(/^This signal has no pulse/).waitFor();
+  check(true, 'Break-it Lab reports a run with no pulse');
+  const streamsAfter = await page.evaluate<number>(STREAMS_OPENED);
+  check(streamsAfter === streamsBefore, 'Break-it Lab asks for no camera');
 
   check(pageErrors.length === 0, 'No uncaught page errors', pageErrors.join(' | '));
   // Reported, not failed: MediaPipe logs ordinary start-up information as console errors.

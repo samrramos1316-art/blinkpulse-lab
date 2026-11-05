@@ -780,3 +780,39 @@ threshold changed, and no validation has been run.
 - `playwright` 1.64.1 added as a dev dependency (optional in PROJECT_SPEC 4). `npm audit` reports 0
   for production dependencies and 13 moderate for dev dependencies, from `minimatch` through ESLint,
   not Playwright.
+
+## Break-it Lab and Privacy check (2026-11-03, author's request)
+
+`SPEC_AMENDMENT_05`, designed by Claude; **the author reviews it**. Built ahead of the open V1, V2,
+and V3 gates at the author's request. No pipeline code or parameter changed.
+
+**Verified**
+
+- `npm run check`: 64 test files, 659 tests pass.
+- `npm run smoke`: passes, now with both features. The Privacy check agreed with Playwright (0 other
+  sites), showed 2 refused logger requests in the 70 s watch, and read `connect-src 'self'`. The
+  Break-it Lab ran and opened no camera.
+- Production build at 360 and 1280 px, light and dark: no horizontal page scrolling and no page
+  errors. Screenshots read by eye. By keyboard: a slider moved, and the dialog opened and closed.
+- A run takes about 153 ms in Node (n = 450 runs).
+
+**Found by the Break-it Lab** (`docs/METHODS.md`; none of it changed)
+
+- The beat-spacing cross-check downgrades correct values under moderate noise, most of all at low
+  rates. **Needs the author's decision before V2 starts.**
+- With a weak signal, most of the rare shown values are wrong (6 of 8).
+- With no pulse, 6 of 2500 seconds showed a value, so the 0% in the Patch D benchmark does not hold
+  for every signal.
+
+**Not verified**
+
+- Any of this on real faces.
+- A screen reader. Only the text alternatives and native controls are in place.
+- The dialog's warning for a request to another site in a browser: the test build never makes one,
+  so only the summary logic behind it is tested.
+- The slider run's delay on a slow phone.
+
+**Deviations**
+
+- None from SPEC_AMENDMENT_05. "Good conditions" keeps its noise level even though it raises the
+  cross-check warning, because lowering the noise after seeing that would hide it (G4).

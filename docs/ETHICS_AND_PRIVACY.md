@@ -36,7 +36,9 @@ The production build injects a CSP `<meta>` tag (`csp.ts`, `vite.config.ts`). Cu
   mean brightness, and clears the canvas. No pixels are kept.
 - `localStorage` holds only the theme preference and a "setup completed" flag.
 - No network requests: a browser run of setup, Start, Stop, and restart made 0 requests to any
-  host other than the app's own origin.
+  host other than the app's own origin. `npm run smoke` repeats this check, and anyone can see the
+  browser's records through the privacy badge (Privacy check, SPEC_AMENDMENT_05). Those records are
+  kept in memory only and are never stored or sent.
 - Face landmarks are computed per frame in memory and are never stored. The Landmark Explorer's
   "Freeze frame" keeps one frame in memory only while frozen.
 - The V1 and V2a tools (`#v1`, `#v2`) read a video file the user picks, from a local object URL;

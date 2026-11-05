@@ -317,3 +317,35 @@ export const HISTORY_COPY = {
     'A change describes the measured minutes only. It can come from when and how long the app ' +
     'ran, the lighting, or the work you did, and says nothing about health.',
 } as const;
+
+/** Break-it Lab (SPEC_AMENDMENT_05 Patch G). */
+export const BREAK_IT_COPY = {
+  title: 'Break-it Lab',
+  intro:
+    'Try to make the pulse estimate fail. This page uses no camera: it simulates 60 seconds of a face and runs them through the same code the app uses. It knows the true rate, so you can see whether the app was right, and when it declined to answer.',
+  legend:
+    'Dots: values the app would show. Dashed line: the true rate. Shaded: no value shown ("-"), including the first 10 seconds, which only collect data.',
+  honesty:
+    'Simulated signal, never a real person. It shows how the checks respond to each condition, not how accurate the app is on real people. The strengths and noise levels are illustrative, not measured from faces. Simulated flicker and head movement are simple, so the app copes with them far better here than it may with real ones.',
+  linkFromLab: 'No camera? Try the Break-it Lab.',
+  linkFromSetup: 'Or try it first with no camera, in the Break-it Lab.',
+} as const;
+
+/** Privacy check (SPEC_AMENDMENT_05 Patch H). */
+export const PRIVACY_CHECK_COPY = {
+  badgeAction: 'Check',
+  title: 'Check the privacy claim',
+  intro:
+    "This comes from your browser's own records of this page since you opened it, and updates every second. It is kept in memory and is gone when the page closes.",
+  noOtherSites: 'The browser has recorded no request from this page to another site.',
+  otherSitesFound:
+    'The browser recorded requests from this page to another site. This is not expected. Please report it.',
+  refusedNote:
+    'The browser refused these, so they were not sent. A usage logger inside the face-tracking library (MediaPipe) tries to connect to its maker about once a minute once face tracking has loaded, and the connection rule above stops it.',
+  noPolicy: 'Not in the page (set by the development server)',
+  limits: [
+    "The page is reporting on itself. To check independently, open your browser's developer tools (F12), choose the Network tab, and reload.",
+    'Browser records do not list every kind of connection, such as WebSockets. The connection rule covers those too.',
+    "Loading these files is itself visible to the site's host, as with any website.",
+  ],
+} as const;

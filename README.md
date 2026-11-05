@@ -99,6 +99,7 @@ npm run ref:clock -- clock.csv 2026-11-03 reference.csv   # reference log from c
 npm run smoke                                  # browser smoke test on the production build (needs Chrome)
 npm run ppg:ref -- ppg.csv reference.csv       # reference BPM from a ground-truth PPG (V2a)
 npm run bench:pulse                            # pulse at lower signal quality (synthetic)
+npm run bench:break                            # Break-it Lab presets over 50 seeds (simulated)
 npm run hrv:limits                             # why HRV is not shown (synthetic, PROJECT_SPEC 7.4)
 ```
 
@@ -118,6 +119,14 @@ Everything still runs on the phone: the computer only serves the page files. Whi
 app asks the phone to keep the screen on (Screen Wake Lock), because a locked screen pauses the
 camera. Phone cameras and processors vary; check the measured frame rate under "Timing details"
 (the indicator and blink timing need at least 24 fps).
+
+**Break-it Lab** (`#break`, no camera needed): change the conditions of a simulated signal and see
+what the app would report next to the true rate, including every time it declines to answer. The
+signal is simulated, so this shows how the checks respond, not how accurate the app is on real
+people.
+
+**Privacy check** (press the privacy badge): the browser's own record of what this page has requested,
+including what the page's security policy refused, and what that record can't prove.
 
 **Signal Lab** (header button): the five steps of the pulse estimate for one skin region, live:
 the raw colour channels, the POS output, the band-pass filter, the filtered waveform with beats,

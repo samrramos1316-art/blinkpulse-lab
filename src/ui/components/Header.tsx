@@ -1,4 +1,5 @@
 import type { CaptureStatus } from '../../app/captureController.ts';
+import { PRIVACY_CHECK_COPY } from '../copy.ts';
 import { APP_NAME, PRIVACY_BADGE, PRIVACY_BADGE_SHORT } from '../strings.ts';
 import { EyeIcon, HelpIcon, LockIcon, LogoMark, PlayIcon, StopIcon } from '../icons/Icons.tsx';
 import { ThemeToggle } from './ThemeToggle.tsx';
@@ -9,6 +10,7 @@ interface HeaderProps {
   onStop: () => void;
   onOpenGuide: () => void;
   onOpenAbout: () => void;
+  onOpenPrivacyCheck: () => void;
   /** Signal Lab view toggle. */
   lab: { open: boolean; onToggle: () => void };
   /** History view toggle (SPEC_AMENDMENT_04 F4). */
@@ -22,6 +24,7 @@ export function Header({
   onStop,
   onOpenGuide,
   onOpenAbout,
+  onOpenPrivacyCheck,
   lab,
   history,
   calibrate,
@@ -39,13 +42,18 @@ export function Header({
           <span className="brand__name">{APP_NAME}</span>
         </div>
 
-        <p className="privacy-badge">
+        <button
+          type="button"
+          className="privacy-badge privacy-badge--button"
+          onClick={onOpenPrivacyCheck}
+        >
           <LockIcon size={16} />
           <span className="privacy-badge__full">{PRIVACY_BADGE}</span>
           <span className="privacy-badge__short" aria-hidden="true">
             {PRIVACY_BADGE_SHORT}
           </span>
-        </p>
+          <span className="privacy-badge__check">{PRIVACY_CHECK_COPY.badgeAction}</span>
+        </button>
 
         <div className="app-header__actions">
           <ThemeToggle />

@@ -4,7 +4,13 @@ import type { CaptureSnapshot } from '../../app/captureController.ts';
 import { useBrightness } from '../../app/useBrightness.ts';
 import type { LandmarkerStatus } from '../../app/useBlink.ts';
 import { captureStatusText } from '../captureStatus.ts';
-import { CALIBRATION_COPY, CAMERA_EFFECTS_TIP, CAMERA_PRIVACY, POSITION_HINT } from '../copy.ts';
+import {
+  BREAK_IT_COPY,
+  CALIBRATION_COPY,
+  CAMERA_EFFECTS_TIP,
+  CAMERA_PRIVACY,
+  POSITION_HINT,
+} from '../copy.ts';
 import { AlertIcon, CheckIcon, InfoIcon, LockIcon, SunLightIcon } from '../icons/Icons.tsx';
 import { SETUP_STEPS, type SetupStep } from '../setup.ts';
 import { positionHint } from '../setupHints.ts';
@@ -64,6 +70,9 @@ export function SetupGuide({
           <p className="setup__privacy">
             <LockIcon size={18} />
             <span>{PRIVACY_BADGE}</span>
+          </p>
+          <p>
+            <a href="#break">{BREAK_IT_COPY.linkFromSetup}</a>
           </p>
           <Actions>
             <button

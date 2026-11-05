@@ -2,13 +2,15 @@ import { useEffect, useState } from 'react';
 import { App } from './App.tsx';
 import { routeFor } from './leaveGuard.ts';
 import { StudyApp } from './study/StudyApp.tsx';
+import { BreakItLab } from './tools/BreakItLab.tsx';
 import { LandmarkExplorer } from './tools/LandmarkExplorer.tsx';
 import { V1Tool } from './tools/V1Tool.tsx';
 import { V2Tool } from './tools/V2Tool.tsx';
 
 /**
  * Hash routes for the developer tools: `#explorer` (Landmark Explorer), `#v1`
- * (validation V1), `#v2` (validation V2a), and `#study` (study mode, PROJECT_SPEC 5.8).
+ * (validation V1), `#v2` (validation V2a), `#study` (study mode, PROJECT_SPEC 5.8), and
+ * `#break` (Break-it Lab, SPEC_AMENDMENT_05).
  * Changing route unmounts the previous view, which releases its camera; a running
  * study session keeps `#study` (leaveGuard.ts).
  */
@@ -30,5 +32,6 @@ export function Root() {
   if (hash === '#v1') return <V1Tool />;
   if (hash === '#v2') return <V2Tool />;
   if (hash === '#study') return <StudyApp />;
+  if (hash === '#break') return <BreakItLab />;
   return <App />;
 }

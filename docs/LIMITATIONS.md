@@ -137,3 +137,17 @@ runs, with their sample sizes.
     use different baselines.
   - Closing the tab can lose the minute in progress.
   - Clearing the browser's site data deletes the history.
+
+## Break-it Lab and Privacy check
+
+- The Break-it Lab's signal is simulated and illustrative. It shows how the checks respond, not how
+  accurate the app is on real people. Its flicker and head movement are simple, so the app copes with
+  them far better there than it may with real ones.
+- In that simulation, with a weak signal, values are rare but most are wrong (6 of 8, 50 seeds), and
+  with no pulse at all, 6 of 2500 seconds showed a value. Details: `docs/METHODS.md`.
+- In that simulation, the beat-spacing cross-check often disagrees with a correct spectral estimate
+  under moderate noise, most of all at low rates (50 BPM: 99% of region-seconds, 10 seeds). This
+  lowers the quality of correct values, and withholds some. Whether it happens on real faces is
+  unknown.
+- The Privacy check is the page reporting on itself, from records that don't list every kind of
+  connection. The browser's own developer tools are the independent check.
